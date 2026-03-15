@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Snack Tap</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(145deg,#e8e8e8 0%,#d0d0d0 50%,#c8c8c8 100%);display:flex;justify-content:center;align-items:center}
+#app{width:100%;max-width:420px;height:100vh;max-height:800px;position:relative;overflow:hidden}
+#app::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+background:repeating-linear-gradient(90deg,transparent,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 4px);
+pointer-events:none;z-index:0}
+
+.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;padding:16px;z-index:1}
+.screen.active{display:flex}
+
+.title{font-size:2.4em;font-weight:900;text-align:center;margin-top:10vh;margin-bottom:8px;
+background:linear-gradient(135deg,#e74c3c,#e67e22,#f1c40f,#2ecc71,#3498db,#9b59b6);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+.subtitle{color:#666;font-size:0.95em;margin-bottom:24px}
+
+.avatar-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;justify-content:center}
+.avatar-btn{width:56px;height:56px;border-radius:16px;border:3px solid #ddd;background:#fff;
+font-size:1.8em;display:flex;align-items:center;justify-content:center;cursor:pointer;
+transition:transform 0.15s,border-color 0.15s;box-shadow:2px 3px 6px rgba(0,0,0,0.15)}
+.avatar-btn.selected{border-color:#e67e22;transform:scale(1.15);box-shadow:2px 3px 12px rgba(230,126,34,0.4)}
+.avatar-btn:active{transform:scale(0.95)}
+
+.menu-btn{width:85%;max-width:300px;padding:16px;border:none;border-radius:14px;font-size:1.15em;
+font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:3px 4px 8px rgba(0,0,0,0.2);
+transition:transform 0.1s;position:relative;overflow:hidden}
+.menu-btn:active{transform:scale(0.97)}
+.btn-daily{background:linear-gradient(135deg,#e67e22,#d35400);color:#fff}
+.btn-free{background:linear-gradient(135deg,#3498db,#2980b9);color:#fff}
+.btn-lead{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff}
+.btn-how{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff}
+.btn-home{background:linear-gradient(135deg,#95a5a6,#7f8c8d);color:#fff}
+
+.champion-banner{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;
+border-radius:12px;font-weight:700;font-size:0.95em;margin-bottom:16px;text-align:center;
+box-shadow:2px 3px 8px rgba(0,0,0,0.2);width:85%;max-width:300px}
+
+/* GAME */
+.game-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 4px;margin-bottom:8px}
+.timer-display{font-size:1.6em;font-weight:900;color:#2c3e50;min-width:60px;text-align:center}
+.score-display{font-size:1.2em;font-weight:700;color:#2c3e50;background:#fff;padding:4px 14px;
+border-radius:10px;box-shadow:2px 2px 6px rgba(0,0,0,0.15)}
+.game-avatar{font-size:1.6em}
+
+.play-area{position:relative;width:min(88vw,380px);height:min(60vh,420px);min-height:300px;
+background:rgba(255,255,255,0.3);border-radius:20px;border:2px dashed rgba(0,0,0,0.1);
+box-shadow:inset 0 2px 8px rgba(0,0,0,0.06);overflow:hidden;touch-action:none}
+
+.food-target{position:absolute;width:60px;height:60px;font-size:2.4em;display:flex;align-items:center;
+justify-content:center;border-radius:50%;background:rgba(255,255,255,0.9);
+box-shadow:3px 4px 10px rgba(0,0,0,0.2),0 0 0 3px rgba(230,126,34,0.3);
+cursor:pointer;transition:none;user-select:none;-webkit-user-select:none}
+.food-target.pop{animation:popOut 0.2s ease forwards}
+
+@keyframes popOut{
+0%{transform:scale(1) rotate(var(--rot));opacity:1}
+100%{transform:scale(1.5) rotate(var(--rot));opacity:0}
+}
+
+@keyframes bounceIn{
+0%{transform:scale(0) rotate(var(--rot));opacity:0}
+60%{transform:scale(1.15) rotate(var(--rot));opacity:1}
+100%{transform:scale(1) rotate(var(--rot));opacity:1}
+}
+
+.food-target.appear{animation:bounceIn 0.25s ease forwards}
+
+.countdown-overlay{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;
+align-items:center;justify-content:center;font-size:5em;font-weight:900;color:#e67e22;
+text-shadow:2px 3px 6px rgba(0,0,0,0.15);z-index:5}
+
+@keyframes countPulse{
+0%{transform:scale(0.5);opacity:0}
+50%{transform:scale(1.2);opacity:1}
+100%{transform:scale(1);opacity:1}
+}
+
+.countdown-num{animation:countPulse 0.5s ease}
+
+.timer-warning{color:#e74c3c !important}
+
+/* RESULTS */
+.results-title{font-size:2em;font-weight:900;margin-top:8vh;margin-bottom:4px}
+.results-score{font-size:3em;font-weight:900;margin-bottom:4px;color:#e67e22}
+.results-detail{font-size:1.1em;color:#666;margin-bottom:4px}
+.results-stars{font-size:2.5em;margin:12px 0}
+.new-record{color:#e74c3c;font-weight:700;font-size:1.1em;margin-bottom:12px}
+
+/* LEADERBOARD */
+.lb-tabs{display:flex;gap:8px;margin-top:8vh;margin-bottom:16px}
+.lb-tab{padding:8px 16px;border-radius:10px;border:2px solid #ddd;background:#fff;font-weight:700;
+cursor:pointer;font-size:0.9em}
+.lb-tab.active{background:#e67e22;color:#fff;border-color:#e67e22}
+.lb-list{width:90%;flex:1;overflow-y:auto}
+.lb-entry{display:flex;align-items:center;padding:10px 12px;background:#fff;border-radius:12px;
+margin-bottom:8px;box-shadow:2px 2px 6px rgba(0,0,0,0.1)}
+.lb-rank{font-size:1.3em;font-weight:900;width:36px;text-align:center;color:#666}
+.lb-avatar{font-size:1.5em;margin:0 10px}
+.lb-score{margin-left:auto;font-size:1.1em;font-weight:800;color:#2c3e50}
+.lb-detail{font-size:0.75em;color:#888;margin-left:8px}
+.lb-empty{text-align:center;color:#999;padding:40px;font-size:1.1em}
+
+.back-btn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.1);border:none;
+border-radius:50%;width:40px;height:40px;font-size:1.2em;cursor:pointer;z-index:10;
+display:flex;align-items:center;justify-content:center}
+
+.how-content{width:90%;max-height:70vh;overflow-y:auto;padding:16px;margin-top:6vh}
+.how-content h2{font-size:1.4em;margin-bottom:12px;color:#2c3e50}
+.how-content p{margin-bottom:12px;line-height:1.5;color:#555;font-size:0.95em}
+.scoring-table{width:100%;border-collapse:collapse;margin:12px 0}
+.scoring-table td{padding:6px 12px;border-bottom:1px solid #eee;font-size:0.9em}
+.scoring-table td:last-child{font-weight:700;text-align:right}
+
+.brand{position:fixed;bottom:8px;right:12px;font-size:0.7em;color:rgba(0,0,0,0.25);
+font-weight:600;letter-spacing:0.5px;z-index:999;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="brand">royabes.com</div>
+<div id="app">
+
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="title">Snack Tap</div>
+    <div class="subtitle">Tap fast. Eat points. 30 seconds.</div>
+    <div id="champion-banner" class="champion-banner" style="display:none"></div>
+    <div class="subtitle" style="margin-bottom:8px;font-size:0.85em">Who's playing?</div>
+    <div class="avatar-row" id="avatar-row"></div>
+    <button class="menu-btn btn-daily" onclick="startGame('daily')">Daily Challenge</button>
+    <button class="menu-btn btn-free" onclick="startGame('free')">Free Play</button>
+    <button class="menu-btn btn-lead" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="menu-btn btn-how" onclick="showScreen('howto')">How to Play</button>
+    <a href="index.html" class="menu-btn btn-home" style="text-align:center;text-decoration:none;display:block">All Games</a>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div class="game-header">
+      <div class="game-avatar" id="game-avatar"></div>
+      <div class="timer-display" id="timer">0:30</div>
+      <div class="score-display" id="score">0 taps</div>
+    </div>
+    <div class="play-area" id="play-area">
+      <div class="countdown-overlay" id="countdown-overlay" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="screen">
+    <div class="results-title">Time's Up!</div>
+    <div class="results-stars" id="results-stars"></div>
+    <div class="results-score" id="results-taps">0 taps</div>
+    <div class="results-detail" id="results-avg">Avg: 0ms</div>
+    <div id="new-record" class="new-record" style="display:none">New Personal Best!</div>
+    <button class="menu-btn btn-daily" onclick="startGame(lastMode)" style="margin-top:20px">Play Again</button>
+    <button class="menu-btn btn-lead" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="menu-btn btn-home" onclick="showScreen('home')">Home</button>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="leaderboard" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="title" style="font-size:1.6em;margin-top:6vh">Leaderboard</div>
+    <div class="lb-tabs">
+      <div class="lb-tab active" onclick="switchLbTab('today',this)">Today</div>
+      <div class="lb-tab" onclick="switchLbTab('alltime',this)">All Time</div>
+    </div>
+    <div class="lb-list" id="lb-list"></div>
+    <button class="menu-btn btn-home" onclick="showScreen('home')" style="margin-top:12px">Home</button>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div id="howto" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="how-content">
+      <h2>How to Play</h2>
+      <p>Food emojis appear one at a time in the play area. Tap each one as fast as you can!</p>
+      <p>Every successful tap scores a point and a new snack appears instantly at a random position. You have <strong>30 seconds</strong> to tap as many as possible.</p>
+      <h2 style="margin-top:16px">Star Rating</h2>
+      <table class="scoring-table">
+        <tr><td>25+ taps</td><td>3 stars</td></tr>
+        <tr><td>18-24 taps</td><td>2 stars</td></tr>
+        <tr><td>Under 18 taps</td><td>1 star</td></tr>
+      </table>
+      <h2 style="margin-top:16px">Daily Challenge</h2>
+      <p>Everyone gets the <strong>same sequence of positions</strong> each day. Compare speed with your family!</p>
+      <h2 style="margin-top:16px">Tips</h2>
+      <p>Stay focused and keep your finger ready. Don't panic -- steady, accurate taps beat wild flailing. Watch for the bounce animation to know where the next target appears.</p>
+    </div>
+    <button class="menu-btn btn-daily" onclick="showScreen('home')" style="margin-top:12px">Got it!</button>
+  </div>
+
+</div>
+
+<script>
+// ===== FOOD EMOJIS =====
+const FOOD_EMOJIS=[
+  '\u{1F34E}','\u{1F34A}','\u{1F34B}','\u{1F347}','\u{1F353}','\u{1F352}','\u{1F351}','\u{1F34C}',
+  '\u{1F349}','\u{1F95D}','\u{1F336}','\u{1F33D}','\u{1F955}','\u{1F966}','\u{1F951}','\u{1F346}',
+  '\u{1F35E}','\u{1F9C0}','\u{1F356}','\u{1F357}','\u{1F354}','\u{1F355}','\u{1F32E}','\u{1F32F}',
+  '\u{1F370}','\u{1F36A}','\u{1F369}','\u{1F366}','\u{1F36B}','\u{2615}','\u{1F375}','\u{1F9C3}'
+];
+
+const AVATARS=[
+  {id:'bear',emoji:'\u{1F43B}',name:'Bear'},
+  {id:'fox',emoji:'\u{1F98A}',name:'Fox'},
+  {id:'frog',emoji:'\u{1F438}',name:'Frog'},
+  {id:'owl',emoji:'\u{1F989}',name:'Owl'},
+  {id:'cat',emoji:'\u{1F431}',name:'Cat'},
+  {id:'dog',emoji:'\u{1F436}',name:'Dog'},
+  {id:'penguin',emoji:'\u{1F427}',name:'Penguin'},
+  {id:'unicorn',emoji:'\u{1F984}',name:'Unicorn'}
+];
+
+// ===== SEEDED RNG =====
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return Math.abs(h)}
+
+// ===== STATE =====
+let currentAvatar=null;
+let tapCount=0;
+let reactionTimes=[];
+let gameTimer=null;
+let remainingSeconds=30;
+let isPlaying=false;
+let lastMode='daily';
+let currentLbTab='today';
+let lastTargetTime=0;
+let dailyRng=null;
+let freeRng=null;
+
+// ===== INIT =====
+function init(){
+  renderAvatars();
+  loadAvatar();
+  updateChampion();
+}
+
+function renderAvatars(){
+  const row=document.getElementById('avatar-row');
+  row.innerHTML=AVATARS.map(a=>
+    `<div class="avatar-btn" data-id="${a.id}" onclick="selectAvatar('${a.id}')">${a.emoji}</div>`
+  ).join('');
+}
+
+function selectAvatar(id){
+  currentAvatar=AVATARS.find(a=>a.id===id);
+  localStorage.setItem('st_avatar',id);
+  document.querySelectorAll('.avatar-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.id===id);
+  });
+}
+
+function loadAvatar(){
+  const saved=localStorage.getItem('st_avatar');
+  if(saved&&AVATARS.find(a=>a.id===saved)){selectAvatar(saved)}
+  else{selectAvatar(AVATARS[0].id)}
+}
+
+// ===== SCREENS =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='home'){updateChampion()}
+  if(id==='leaderboard'){renderLeaderboard(currentLbTab)}
+}
+
+// ===== CHAMPION =====
+function updateChampion(){
+  const banner=document.getElementById('champion-banner');
+  const today=getTodayKey();
+  const scores=getScores().filter(s=>s.date===today);
+  if(scores.length===0){banner.style.display='none';return}
+  scores.sort((a,b)=>b.taps-a.taps||(a.avgMs-b.avgMs));
+  const champ=scores[0];
+  const av=AVATARS.find(a=>a.id===champ.avatar);
+  banner.textContent=`${av?av.emoji:''} ${av?av.name:'???'} is today's Snack Champ! (${champ.taps} taps)`;
+  banner.style.display='block';
+}
+
+// ===== GAME =====
+function getRng(mode){
+  if(mode==='daily'){
+    const seed=hashStr('snacktap'+getTodayKey());
+    return mulberry32(seed);
+  }else{
+    return mulberry32(hashStr(Date.now().toString()));
+  }
+}
+
+function startGame(mode){
+  if(!currentAvatar)selectAvatar(AVATARS[0].id);
+  lastMode=mode;
+  tapCount=0;
+  reactionTimes=[];
+  remainingSeconds=30;
+  isPlaying=false;
+  lastTargetTime=0;
+
+  if(mode==='daily'){
+    dailyRng=getRng('daily');
+    freeRng=null;
+  }else{
+    freeRng=getRng('free');
+    dailyRng=null;
+  }
+
+  document.getElementById('game-avatar').textContent=currentAvatar.emoji;
+  document.getElementById('score').textContent='0 taps';
+  document.getElementById('timer').textContent='0:30';
+  document.getElementById('timer').classList.remove('timer-warning');
+
+  const area=document.getElementById('play-area');
+  // Remove any existing targets
+  const oldTarget=area.querySelector('.food-target');
+  if(oldTarget)oldTarget.remove();
+
+  showScreen('game');
+  runCountdown();
+}
+
+function runCountdown(){
+  const overlay=document.getElementById('countdown-overlay');
+  overlay.style.display='flex';
+  let count=3;
+  overlay.innerHTML=`<span class="countdown-num">${count}</span>`;
+
+  const countInterval=setInterval(()=>{
+    count--;
+    if(count>0){
+      overlay.innerHTML=`<span class="countdown-num">${count}</span>`;
+    }else if(count===0){
+      overlay.innerHTML=`<span class="countdown-num">GO!</span>`;
+    }else{
+      clearInterval(countInterval);
+      overlay.style.display='none';
+      beginPlay();
+    }
+  },700);
+}
+
+function beginPlay(){
+  isPlaying=true;
+  remainingSeconds=30;
+  document.getElementById('timer').textContent='0:30';
+  clearInterval(gameTimer);
+  gameTimer=setInterval(()=>{
+    remainingSeconds--;
+    const m=Math.floor(remainingSeconds/60);
+    const s=remainingSeconds%60;
+    document.getElementById('timer').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    if(remainingSeconds<=5){
+      document.getElementById('timer').classList.add('timer-warning');
+    }
+    if(remainingSeconds<=0){
+      endGame();
+    }
+  },1000);
+  spawnTarget();
+}
+
+function getActiveRng(){
+  return dailyRng||freeRng;
+}
+
+function spawnTarget(){
+  if(!isPlaying)return;
+  const area=document.getElementById('play-area');
+  const rng=getActiveRng();
+
+  // Remove old target
+  const old=area.querySelector('.food-target');
+  if(old)old.remove();
+
+  // Pick random food emoji
+  const emojiIdx=Math.floor(rng()*FOOD_EMOJIS.length);
+  const emoji=FOOD_EMOJIS[emojiIdx];
+
+  // Random position within area bounds (accounting for 60px target size)
+  const areaRect=area.getBoundingClientRect();
+  const maxX=area.clientWidth-60;
+  const maxY=area.clientHeight-60;
+  const x=Math.floor(rng()*maxX);
+  const y=Math.floor(rng()*maxY);
+
+  // Random rotation for visual interest
+  const rotation=Math.floor(rng()*40)-20;
+
+  const target=document.createElement('div');
+  target.className='food-target appear';
+  target.style.left=x+'px';
+  target.style.top=y+'px';
+  target.style.setProperty('--rot',rotation+'deg');
+  target.style.transform=`rotate(${rotation}deg)`;
+  target.textContent=emoji;
+
+  target.addEventListener('pointerdown',function(e){
+    e.preventDefault();
+    e.stopPropagation();
+    onTargetTap(target);
+  },{passive:false});
+
+  area.appendChild(target);
+  lastTargetTime=performance.now();
+}
+
+function onTargetTap(target){
+  if(!isPlaying)return;
+
+  const now=performance.now();
+  const reactionMs=Math.round(now-lastTargetTime);
+  reactionTimes.push(reactionMs);
+  tapCount++;
+
+  document.getElementById('score').textContent=`${tapCount} tap${tapCount!==1?'s':''}`;
+
+  // Pop animation
+  target.classList.remove('appear');
+  target.classList.add('pop');
+
+  // After pop animation, spawn new target
+  setTimeout(()=>{
+    target.remove();
+    spawnTarget();
+  },180);
+}
+
+function endGame(){
+  clearInterval(gameTimer);
+  isPlaying=false;
+
+  // Remove target
+  const area=document.getElementById('play-area');
+  const old=area.querySelector('.food-target');
+  if(old)old.remove();
+
+  saveScore();
+  showResults();
+}
+
+// ===== RESULTS =====
+function showResults(){
+  document.getElementById('results-taps').textContent=`${tapCount} taps`;
+
+  const avgMs=reactionTimes.length>0?Math.round(reactionTimes.reduce((a,b)=>a+b,0)/reactionTimes.length):0;
+  document.getElementById('results-avg').textContent=`Avg reaction: ${avgMs}ms`;
+
+  // Stars
+  let stars=1;
+  if(tapCount>=25)stars=3;
+  else if(tapCount>=18)stars=2;
+  document.getElementById('results-stars').textContent=
+    '\u{2B50}'.repeat(stars)+'\u{2606}'.repeat(3-stars);
+
+  // Check personal best
+  const scores=getScores().filter(s=>s.avatar===currentAvatar.id);
+  const best=scores.length>1?Math.max(...scores.slice(0,-1).map(s=>s.taps)):0;
+  document.getElementById('new-record').style.display=
+    (tapCount>0&&tapCount>=best)?'block':'none';
+
+  showScreen('results');
+}
+
+// ===== STORAGE =====
+function getTodayKey(){return new Date().toISOString().slice(0,10)}
+
+function getScores(){
+  try{return JSON.parse(localStorage.getItem('st_scores')||'[]')}
+  catch(e){return[]}
+}
+
+function saveScore(){
+  const avgMs=reactionTimes.length>0?Math.round(reactionTimes.reduce((a,b)=>a+b,0)/reactionTimes.length):0;
+  const scores=getScores();
+  scores.push({
+    avatar:currentAvatar.id,
+    taps:tapCount,
+    avgMs:avgMs,
+    date:getTodayKey(),
+    mode:lastMode,
+    ts:Date.now()
+  });
+  if(scores.length>500)scores.splice(0,scores.length-500);
+  try{localStorage.setItem('st_scores',JSON.stringify(scores))}catch(e){}
+}
+
+// ===== LEADERBOARD =====
+function switchLbTab(tab,el){
+  currentLbTab=tab;
+  document.querySelectorAll('.lb-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderLeaderboard(tab);
+}
+
+function renderLeaderboard(tab){
+  const scores=getScores();
+  let filtered;
+  if(tab==='today'){filtered=scores.filter(s=>s.date===getTodayKey())}
+  else{filtered=scores}
+
+  // Best per avatar: most taps, tiebreak by lowest avgMs
+  const best={};
+  filtered.forEach(s=>{
+    if(!best[s.avatar]||s.taps>best[s.avatar].taps||(s.taps===best[s.avatar].taps&&s.avgMs<best[s.avatar].avgMs)){
+      best[s.avatar]=s;
+    }
+  });
+
+  const sorted=Object.values(best).sort((a,b)=>b.taps-a.taps||(a.avgMs-b.avgMs));
+  const list=document.getElementById('lb-list');
+
+  if(sorted.length===0){
+    list.innerHTML='<div class="lb-empty">No scores yet. Go play!</div>';
+    return;
+  }
+
+  list.innerHTML=sorted.map((s,i)=>{
+    const av=AVATARS.find(a=>a.id===s.avatar);
+    const rankText=i===0?'\u{1F451}':i===1?'\u{1F948}':i===2?'\u{1F949}':(i+1);
+    return`<div class="lb-entry">
+      <div class="lb-rank">${rankText}</div>
+      <div class="lb-avatar">${av?av.emoji:'?'}</div>
+      <div style="font-weight:600">${av?av.name:'???'}</div>
+      <div class="lb-detail">${s.avgMs}ms avg</div>
+      <div class="lb-score">${s.taps} taps</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== PREVENT ZOOM =====
+document.addEventListener('dblclick',e=>e.preventDefault());
+
+// Prevent scrolling/bouncing on touch
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>

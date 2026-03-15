@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Kitchen Simon</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(145deg,#e8e8e8 0%,#d0d0d0 50%,#c8c8c8 100%);display:flex;justify-content:center;align-items:center}
+#app{width:100%;max-width:420px;height:100vh;max-height:800px;position:relative;overflow:hidden}
+#app::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+background:repeating-linear-gradient(90deg,transparent,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 4px);
+pointer-events:none;z-index:0}
+
+.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;padding:16px;z-index:1}
+.screen.active{display:flex}
+
+.title{font-size:2.4em;font-weight:900;text-align:center;margin-top:10vh;margin-bottom:8px;
+background:linear-gradient(135deg,#e74c3c,#e67e22,#f1c40f,#2ecc71,#3498db,#9b59b6);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+.subtitle{color:#666;font-size:0.95em;margin-bottom:24px}
+
+.avatar-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;justify-content:center}
+.avatar-btn{width:56px;height:56px;border-radius:16px;border:3px solid #ddd;background:#fff;
+font-size:1.8em;display:flex;align-items:center;justify-content:center;cursor:pointer;
+transition:transform 0.15s,border-color 0.15s;box-shadow:2px 3px 6px rgba(0,0,0,0.15)}
+.avatar-btn.selected{border-color:#9b59b6;transform:scale(1.15);box-shadow:2px 3px 12px rgba(155,89,182,0.4)}
+.avatar-btn:active{transform:scale(0.95)}
+
+.menu-btn{width:85%;max-width:300px;padding:16px;border:none;border-radius:14px;font-size:1.15em;
+font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:3px 4px 8px rgba(0,0,0,0.2);
+transition:transform 0.1s;position:relative;overflow:hidden}
+.menu-btn:active{transform:scale(0.97)}
+.btn-daily{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+.btn-free{background:linear-gradient(135deg,#3498db,#2980b9);color:#fff}
+.btn-lead{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff}
+.btn-how{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff}
+.btn-home{background:linear-gradient(135deg,#95a5a6,#7f8c8d);color:#fff}
+
+.champion-banner{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;
+border-radius:12px;font-weight:700;font-size:0.95em;margin-bottom:16px;text-align:center;
+box-shadow:2px 3px 8px rgba(0,0,0,0.2);width:85%;max-width:300px}
+
+/* GAME */
+.game-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 4px;margin-bottom:4px}
+.game-avatar{font-size:1.6em}
+.round-display{font-size:1.6em;font-weight:900;color:#2c3e50;min-width:60px;text-align:center}
+.status-display{font-size:1.2em;font-weight:700;color:#2c3e50;background:#fff;padding:4px 14px;
+border-radius:10px;box-shadow:2px 2px 6px rgba(0,0,0,0.15)}
+
+.simon-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:min(85vw,340px);
+margin:0 auto;padding:4px}
+
+.simon-btn{width:100%;aspect-ratio:1;min-height:140px;border-radius:20px;border:none;cursor:pointer;
+transition:transform 0.12s,filter 0.12s,box-shadow 0.12s;
+box-shadow:4px 5px 10px rgba(0,0,0,0.3),inset 0 2px 4px rgba(255,255,255,0.2);
+position:relative;overflow:hidden}
+.simon-btn:active{transform:scale(0.97)}
+.simon-btn::after{content:'';position:absolute;top:10%;left:10%;width:40%;height:25%;
+border-radius:50%;background:rgba(255,255,255,0.15);pointer-events:none}
+
+.simon-btn.red{background:#e74c3c}
+.simon-btn.green{background:#2ecc71}
+.simon-btn.blue{background:#3498db}
+.simon-btn.yellow{background:#f1c40f}
+
+.simon-btn.red.lit{background:#ff6b6b;transform:scale(1.06);box-shadow:0 0 30px rgba(255,107,107,0.6),4px 5px 10px rgba(0,0,0,0.3)}
+.simon-btn.green.lit{background:#69f0ae;transform:scale(1.06);box-shadow:0 0 30px rgba(105,240,174,0.6),4px 5px 10px rgba(0,0,0,0.3)}
+.simon-btn.blue.lit{background:#64b5f6;transform:scale(1.06);box-shadow:0 0 30px rgba(100,181,246,0.6),4px 5px 10px rgba(0,0,0,0.3)}
+.simon-btn.yellow.lit{background:#ffee58;transform:scale(1.06);box-shadow:0 0 30px rgba(255,238,88,0.6),4px 5px 10px rgba(0,0,0,0.3)}
+
+.simon-btn.flash{filter:brightness(1.5);transform:scale(1.04)}
+
+.simon-btn.disabled{opacity:0.6;pointer-events:none}
+
+.game-status{text-align:center;margin-top:12px;font-size:1.3em;font-weight:800;min-height:40px;
+display:flex;align-items:center;justify-content:center}
+.game-status.watch{color:#9b59b6}
+.game-status.turn{color:#27ae60}
+.game-status.correct{color:#f39c12}
+.game-status.fail{color:#e74c3c}
+
+/* RESULTS */
+.results-title{font-size:2em;font-weight:900;margin-top:8vh;margin-bottom:4px}
+.results-score{font-size:3.5em;font-weight:900;margin-bottom:4px;
+background:linear-gradient(135deg,#9b59b6,#8e44ad);-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;background-clip:text}
+.results-detail{font-size:1.1em;color:#666;margin-bottom:4px}
+.results-stars{font-size:2.5em;margin:12px 0}
+.new-record{color:#e74c3c;font-weight:700;font-size:1.1em;margin-bottom:12px}
+
+/* LEADERBOARD */
+.lb-tabs{display:flex;gap:8px;margin-top:8vh;margin-bottom:16px}
+.lb-tab{padding:8px 16px;border-radius:10px;border:2px solid #ddd;background:#fff;font-weight:700;
+cursor:pointer;font-size:0.9em}
+.lb-tab.active{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;border-color:#9b59b6}
+.lb-list{width:90%;flex:1;overflow-y:auto}
+.lb-entry{display:flex;align-items:center;padding:10px 12px;background:#fff;border-radius:12px;
+margin-bottom:8px;box-shadow:2px 2px 6px rgba(0,0,0,0.1)}
+.lb-rank{font-size:1.3em;font-weight:900;width:36px;text-align:center;color:#666}
+.lb-avatar{font-size:1.5em;margin:0 10px}
+.lb-score{margin-left:auto;font-size:1.1em;font-weight:800;color:#2c3e50}
+.lb-detail{font-size:0.75em;color:#888;margin-left:8px}
+.lb-empty{text-align:center;color:#999;padding:40px;font-size:1.1em}
+
+.back-btn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.1);border:none;
+border-radius:50%;width:40px;height:40px;font-size:1.2em;cursor:pointer;z-index:10;
+display:flex;align-items:center;justify-content:center}
+
+.how-content{width:90%;max-height:70vh;overflow-y:auto;padding:16px;margin-top:6vh}
+.how-content h2{font-size:1.4em;margin-bottom:12px;color:#2c3e50}
+.how-content p{margin-bottom:12px;line-height:1.5;color:#555;font-size:0.95em}
+.scoring-table{width:100%;border-collapse:collapse;margin:12px 0}
+.scoring-table td{padding:6px 12px;border-bottom:1px solid #eee;font-size:0.9em}
+.scoring-table td:last-child{font-weight:700;text-align:right}
+
+.brand{position:fixed;bottom:8px;right:12px;font-size:0.7em;color:rgba(0,0,0,0.25);
+font-weight:600;letter-spacing:0.5px;z-index:999;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="brand">royabes.com</div>
+<div id="app">
+
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="title">Kitchen Simon</div>
+    <div class="subtitle">Watch. Remember. Repeat.</div>
+    <div id="champion-banner" class="champion-banner" style="display:none"></div>
+    <div class="subtitle" style="margin-bottom:8px;font-size:0.85em">Who's playing?</div>
+    <div class="avatar-row" id="avatar-row"></div>
+    <button class="menu-btn btn-daily" onclick="startGame('daily')">Daily Challenge</button>
+    <button class="menu-btn btn-free" onclick="startGame('free')">Free Play</button>
+    <button class="menu-btn btn-lead" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="menu-btn btn-how" onclick="showScreen('howto')">How to Play</button>
+    <a href="index.html" class="menu-btn btn-home" style="text-align:center;text-decoration:none;display:block">All Games</a>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div class="game-header">
+      <div class="game-avatar" id="game-avatar"></div>
+      <div class="round-display" id="round-display">Round 1</div>
+      <div class="status-display" id="status-display">Get Ready</div>
+    </div>
+    <div class="simon-grid" id="simon-grid">
+      <button class="simon-btn red disabled" data-color="0" onclick="playerTap(0)"></button>
+      <button class="simon-btn green disabled" data-color="1" onclick="playerTap(1)"></button>
+      <button class="simon-btn blue disabled" data-color="2" onclick="playerTap(2)"></button>
+      <button class="simon-btn yellow disabled" data-color="3" onclick="playerTap(3)"></button>
+    </div>
+    <div class="game-status" id="game-status"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="screen">
+    <div class="results-title">Game Over</div>
+    <div class="results-stars" id="results-stars"></div>
+    <div class="results-score" id="results-rounds">0</div>
+    <div class="results-detail">rounds completed</div>
+    <div id="new-record" class="new-record" style="display:none">New Personal Best!</div>
+    <button class="menu-btn btn-daily" onclick="startGame(lastMode)" style="margin-top:20px">Play Again</button>
+    <button class="menu-btn btn-lead" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="menu-btn btn-how" onclick="showScreen('home')">Home</button>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="leaderboard" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="title" style="font-size:1.6em;margin-top:6vh">Leaderboard</div>
+    <div class="lb-tabs">
+      <div class="lb-tab active" onclick="switchLbTab('today',this)">Today</div>
+      <div class="lb-tab" onclick="switchLbTab('alltime',this)">All Time</div>
+    </div>
+    <div class="lb-list" id="lb-list"></div>
+    <button class="menu-btn btn-how" onclick="showScreen('home')" style="margin-top:12px">Home</button>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div id="howto" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="how-content">
+      <h2>How to Play</h2>
+      <p>Watch the colored buttons light up in a sequence. Then tap the buttons in the same order.</p>
+      <p>Each round adds one more step to the sequence. Keep going as long as you can remember!</p>
+      <p>The game ends when you tap the wrong button. Your score is the number of rounds you completed.</p>
+      <h2 style="margin-top:16px">Star Rating</h2>
+      <table class="scoring-table">
+        <tr><td>10+ rounds</td><td>3 stars</td></tr>
+        <tr><td>6-9 rounds</td><td>2 stars</td></tr>
+        <tr><td>Under 6 rounds</td><td>1 star</td></tr>
+      </table>
+      <h2 style="margin-top:16px">Daily Challenge</h2>
+      <p>Everyone gets the <strong>same sequence</strong> each day. Compare your memory with your family!</p>
+      <h2 style="margin-top:16px">Tips</h2>
+      <p>Try grouping colors into patterns. Say the colors in your head as you watch. The sequence speeds up as you progress, so stay focused!</p>
+    </div>
+    <button class="menu-btn btn-daily" onclick="showScreen('home')" style="margin-top:12px">Got it!</button>
+  </div>
+
+</div>
+
+<script>
+// ===== AVATARS =====
+const AVATARS=[
+  {id:'bear',emoji:'\u{1F43B}',name:'Bear'},
+  {id:'fox',emoji:'\u{1F98A}',name:'Fox'},
+  {id:'frog',emoji:'\u{1F438}',name:'Frog'},
+  {id:'owl',emoji:'\u{1F989}',name:'Owl'},
+  {id:'cat',emoji:'\u{1F431}',name:'Cat'},
+  {id:'dog',emoji:'\u{1F436}',name:'Dog'},
+  {id:'penguin',emoji:'\u{1F427}',name:'Penguin'},
+  {id:'unicorn',emoji:'\u{1F984}',name:'Unicorn'}
+];
+
+// ===== SEEDED RNG =====
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return Math.abs(h)}
+
+// ===== STATE =====
+let currentAvatar=null;
+let sequence=[];
+let playerIndex=0;
+let roundNumber=0;
+let isPlayback=false;
+let isPlayerTurn=false;
+let lastMode='daily';
+let currentLbTab='today';
+let gameRng=null;
+
+// ===== INIT =====
+function init(){
+  renderAvatars();
+  loadAvatar();
+  updateChampion();
+}
+
+function renderAvatars(){
+  const row=document.getElementById('avatar-row');
+  row.innerHTML=AVATARS.map(a=>
+    `<div class="avatar-btn" data-id="${a.id}" onclick="selectAvatar('${a.id}')">${a.emoji}</div>`
+  ).join('');
+}
+
+function selectAvatar(id){
+  currentAvatar=AVATARS.find(a=>a.id===id);
+  localStorage.setItem('ks_avatar',id);
+  document.querySelectorAll('.avatar-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.id===id);
+  });
+}
+
+function loadAvatar(){
+  const saved=localStorage.getItem('ks_avatar');
+  if(saved&&AVATARS.find(a=>a.id===saved)){selectAvatar(saved)}
+  else{selectAvatar(AVATARS[0].id)}
+}
+
+// ===== SCREENS =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='home'){updateChampion()}
+  if(id==='leaderboard'){renderLeaderboard(currentLbTab)}
+}
+
+// ===== CHAMPION =====
+function updateChampion(){
+  const banner=document.getElementById('champion-banner');
+  const today=getTodayKey();
+  const scores=getScores().filter(s=>s.date===today);
+  if(scores.length===0){banner.style.display='none';return}
+  scores.sort((a,b)=>b.rounds-a.rounds);
+  const champ=scores[0];
+  const av=AVATARS.find(a=>a.id===champ.avatar);
+  banner.textContent=`${av?av.emoji:''} ${av?av.name:'???'} is today's Simon Champion! (${champ.rounds} rounds)`;
+  banner.style.display='block';
+}
+
+// ===== GAME =====
+function startGame(mode){
+  if(!currentAvatar)selectAvatar(AVATARS[0].id);
+  lastMode=mode;
+
+  let seed;
+  if(mode==='daily'){seed=hashStr('simon'+getTodayKey())}
+  else{seed=hashStr(Date.now().toString())}
+  gameRng=mulberry32(seed);
+
+  sequence=[];
+  playerIndex=0;
+  roundNumber=0;
+  isPlayback=false;
+  isPlayerTurn=false;
+
+  document.getElementById('game-avatar').textContent=currentAvatar.emoji;
+  document.getElementById('round-display').textContent='Round 1';
+
+  setButtons(false);
+  showScreen('game');
+
+  setTimeout(()=>nextRound(),800);
+}
+
+function nextRound(){
+  roundNumber++;
+  document.getElementById('round-display').textContent='Round '+roundNumber;
+
+  // Add next color to sequence
+  const next=Math.floor(gameRng()*4);
+  sequence.push(next);
+
+  playerIndex=0;
+  isPlayerTurn=false;
+  isPlayback=true;
+  setButtons(false);
+  setStatus('Watch...','watch');
+
+  // Delay before playback starts
+  setTimeout(()=>playSequence(),500);
+}
+
+function getFlashDuration(){
+  // Start at 600ms, decrease by 15ms per round, minimum 300ms
+  return Math.max(300,600-(roundNumber-1)*15);
+}
+
+function playSequence(){
+  const dur=getFlashDuration();
+  const gap=dur*0.5; // gap between flashes
+  let i=0;
+
+  function flashNext(){
+    if(i>=sequence.length){
+      // Playback done, player's turn
+      isPlayback=false;
+      isPlayerTurn=true;
+      setButtons(true);
+      setStatus("Your turn!",'turn');
+      return;
+    }
+    lightUp(sequence[i],dur);
+    i++;
+    setTimeout(flashNext,dur+gap);
+  }
+
+  flashNext();
+}
+
+function lightUp(colorIdx,duration){
+  const btns=document.querySelectorAll('.simon-btn');
+  const btn=btns[colorIdx];
+  btn.classList.add('lit');
+  setTimeout(()=>btn.classList.remove('lit'),duration*0.8);
+}
+
+function playerTap(colorIdx){
+  if(!isPlayerTurn||isPlayback)return;
+
+  const btns=document.querySelectorAll('.simon-btn');
+  const btn=btns[colorIdx];
+
+  // Flash effect
+  btn.classList.add('flash');
+  setTimeout(()=>btn.classList.remove('flash'),150);
+
+  if(sequence[playerIndex]===colorIdx){
+    // Correct
+    playerIndex++;
+    if(playerIndex>=sequence.length){
+      // Round complete
+      isPlayerTurn=false;
+      setButtons(false);
+      setStatus('Correct!','correct');
+      setTimeout(()=>nextRound(),1000);
+    }
+  }else{
+    // Wrong -- game over
+    isPlayerTurn=false;
+    setButtons(false);
+    setStatus('Wrong!','fail');
+
+    // Flash the correct button to show what it should have been
+    const correctBtn=btns[sequence[playerIndex]];
+    setTimeout(()=>{
+      correctBtn.classList.add('lit');
+      setTimeout(()=>{
+        correctBtn.classList.remove('lit');
+        endGame();
+      },600);
+    },400);
+  }
+}
+
+function setButtons(enabled){
+  document.querySelectorAll('.simon-btn').forEach(btn=>{
+    if(enabled){btn.classList.remove('disabled')}
+    else{btn.classList.add('disabled')}
+  });
+}
+
+function setStatus(text,cls){
+  const el=document.getElementById('game-status');
+  el.textContent=text;
+  el.className='game-status';
+  if(cls)el.classList.add(cls);
+}
+
+function endGame(){
+  const completed=roundNumber-1; // They failed on current round, so completed = roundNumber - 1
+  saveScore(completed);
+  showResults(completed);
+}
+
+// ===== RESULTS =====
+function showResults(completed){
+  document.getElementById('results-rounds').textContent=completed;
+
+  // Stars
+  let stars=1;
+  if(completed>=10)stars=3;
+  else if(completed>=6)stars=2;
+  document.getElementById('results-stars').textContent=
+    '\u{2B50}'.repeat(stars)+'\u{2606}'.repeat(3-stars);
+
+  // Check personal best
+  const scores=getScores().filter(s=>s.avatar===currentAvatar.id);
+  const prevScores=scores.slice(0,-1); // exclude the one we just saved
+  const best=prevScores.length>0?Math.max(...prevScores.map(s=>s.rounds)):0;
+  document.getElementById('new-record').style.display=
+    (completed>0&&completed>=best)?'block':'none';
+
+  showScreen('results');
+}
+
+// ===== STORAGE =====
+function getTodayKey(){return new Date().toISOString().slice(0,10)}
+
+function getScores(){
+  try{return JSON.parse(localStorage.getItem('ks_scores')||'[]')}
+  catch(e){return[]}
+}
+
+function saveScore(completed){
+  const scores=getScores();
+  scores.push({
+    avatar:currentAvatar.id,
+    rounds:completed,
+    date:getTodayKey(),
+    mode:lastMode,
+    ts:Date.now()
+  });
+  if(scores.length>500)scores.splice(0,scores.length-500);
+  try{localStorage.setItem('ks_scores',JSON.stringify(scores))}catch(e){}
+}
+
+// ===== LEADERBOARD =====
+function switchLbTab(tab,el){
+  currentLbTab=tab;
+  document.querySelectorAll('.lb-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderLeaderboard(tab);
+}
+
+function renderLeaderboard(tab){
+  const scores=getScores();
+  let filtered;
+  if(tab==='today'){filtered=scores.filter(s=>s.date===getTodayKey())}
+  else{filtered=scores}
+
+  // Best score per avatar (highest rounds)
+  const best={};
+  filtered.forEach(s=>{
+    if(!best[s.avatar]||s.rounds>best[s.avatar].rounds){
+      best[s.avatar]=s;
+    }
+  });
+
+  const sorted=Object.values(best).sort((a,b)=>b.rounds-a.rounds);
+  const list=document.getElementById('lb-list');
+
+  if(sorted.length===0){
+    list.innerHTML='<div class="lb-empty">No scores yet. Go play!</div>';
+    return;
+  }
+
+  list.innerHTML=sorted.map((s,i)=>{
+    const av=AVATARS.find(a=>a.id===s.avatar);
+    const rankText=i===0?'\u{1F451}':i===1?'\u{1F948}':i===2?'\u{1F949}':(i+1);
+    return`<div class="lb-entry">
+      <div class="lb-rank">${rankText}</div>
+      <div class="lb-avatar">${av?av.emoji:'?'}</div>
+      <div style="font-weight:600">${av?av.name:'???'}</div>
+      <div class="lb-score">${s.rounds} rounds</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== PREVENT ZOOM =====
+document.addEventListener('dblclick',e=>e.preventDefault());
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>

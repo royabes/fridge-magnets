@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Math Chef</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(145deg,#e8e8e8 0%,#d0d0d0 50%,#c8c8c8 100%);display:flex;justify-content:center;align-items:center}
+#app{width:100%;max-width:420px;height:100vh;max-height:800px;position:relative;overflow:hidden}
+#app::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+background:repeating-linear-gradient(90deg,transparent,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 4px);
+pointer-events:none;z-index:0}
+
+.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;padding:16px;z-index:1}
+.screen.active{display:flex}
+
+.title{font-size:2.4em;font-weight:900;text-align:center;margin-top:10vh;margin-bottom:8px;
+background:linear-gradient(135deg,#e74c3c,#e67e22,#f1c40f,#2ecc71,#3498db,#9b59b6);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+.subtitle{color:#666;font-size:0.95em;margin-bottom:24px}
+
+.avatar-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;justify-content:center}
+.avatar-btn{width:56px;height:56px;border-radius:16px;border:3px solid #ddd;background:#fff;
+font-size:1.8em;display:flex;align-items:center;justify-content:center;cursor:pointer;
+transition:transform 0.15s,border-color 0.15s;box-shadow:2px 3px 6px rgba(0,0,0,0.15)}
+.avatar-btn.selected{border-color:#2ecc71;transform:scale(1.15);box-shadow:2px 3px 12px rgba(46,204,113,0.4)}
+.avatar-btn:active{transform:scale(0.95)}
+
+.menu-btn{width:85%;max-width:300px;padding:16px;border:none;border-radius:14px;font-size:1.15em;
+font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:3px 4px 8px rgba(0,0,0,0.2);
+transition:transform 0.1s;position:relative;overflow:hidden}
+.menu-btn:active{transform:scale(0.97)}
+.btn-daily{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+.btn-free{background:linear-gradient(135deg,#3498db,#2980b9);color:#fff}
+.btn-lead{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff}
+.btn-how{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff}
+.btn-home{background:linear-gradient(135deg,#95a5a6,#7f8c8d);color:#fff}
+
+.champion-banner{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;
+border-radius:12px;font-weight:700;font-size:0.95em;margin-bottom:16px;text-align:center;
+box-shadow:2px 3px 8px rgba(0,0,0,0.2);width:85%;max-width:300px}
+
+/* GAME */
+.game-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 4px;margin-bottom:4px}
+.timer-display{font-size:2em;font-weight:900;color:#2c3e50;min-width:60px;text-align:center}
+.timer-display.urgent{color:#e74c3c;animation:pulse 0.5s ease infinite alternate}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.08)}}
+.score-display{font-size:1.2em;font-weight:700;color:#2c3e50;background:#fff;padding:4px 14px;
+border-radius:10px;box-shadow:2px 2px 6px rgba(0,0,0,0.15)}
+.game-avatar{font-size:1.6em}
+
+.streak-bar{width:100%;text-align:center;font-size:0.95em;font-weight:700;color:#555;margin-bottom:12px}
+.streak-count{color:#e67e22;font-weight:900}
+
+.problem-area{flex:1;display:flex;justify-content:center;align-items:center;width:100%}
+.problem-text{font-size:2.8em;font-weight:900;color:#2c3e50;text-align:center;letter-spacing:2px;
+background:#fff;padding:20px 36px;border-radius:20px;box-shadow:3px 4px 10px rgba(0,0,0,0.15);
+min-width:220px}
+
+.answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:min(90vw,360px);
+margin:0 auto;padding:8px 4px 16px}
+.answer-btn{min-height:80px;border-radius:16px;border:none;background:#fff;font-size:1.8em;
+font-weight:800;color:#2c3e50;cursor:pointer;box-shadow:3px 4px 8px rgba(0,0,0,0.15);
+transition:transform 0.1s;display:flex;align-items:center;justify-content:center}
+.answer-btn:active{transform:scale(0.95)}
+.answer-btn.correct-flash{background:linear-gradient(135deg,#2ecc71,#27ae60)!important;color:#fff!important;transform:scale(1.05)}
+.answer-btn.wrong-flash{background:linear-gradient(135deg,#e74c3c,#c0392b)!important;color:#fff!important;transform:scale(0.95)}
+.answer-btn.disabled{pointer-events:none;opacity:0.7}
+
+/* RESULTS */
+.results-title{font-size:2em;font-weight:900;margin-top:6vh;margin-bottom:4px;color:#2c3e50}
+.results-score{font-size:3.5em;font-weight:900;margin-bottom:4px;
+background:linear-gradient(135deg,#2ecc71,#27ae60);-webkit-background-clip:text;
+-webkit-text-fill-color:transparent;background-clip:text}
+.results-detail{font-size:1.1em;color:#666;margin-bottom:4px}
+.results-stars{font-size:2.5em;margin:12px 0}
+.new-record{color:#e74c3c;font-weight:700;font-size:1.1em;margin-bottom:12px}
+
+/* LEADERBOARD */
+.lb-tabs{display:flex;gap:8px;margin-top:8vh;margin-bottom:16px}
+.lb-tab{padding:8px 16px;border-radius:10px;border:2px solid #ddd;background:#fff;font-weight:700;
+cursor:pointer;font-size:0.9em}
+.lb-tab.active{background:#2ecc71;color:#fff;border-color:#2ecc71}
+.lb-list{width:90%;flex:1;overflow-y:auto}
+.lb-entry{display:flex;align-items:center;padding:10px 12px;background:#fff;border-radius:12px;
+margin-bottom:8px;box-shadow:2px 2px 6px rgba(0,0,0,0.1)}
+.lb-rank{font-size:1.3em;font-weight:900;width:36px;text-align:center;color:#666}
+.lb-avatar{font-size:1.5em;margin:0 10px}
+.lb-score{margin-left:auto;font-size:1.1em;font-weight:800;color:#2c3e50}
+.lb-detail{font-size:0.75em;color:#888;margin-left:8px}
+.lb-empty{text-align:center;color:#999;padding:40px;font-size:1.1em}
+
+.back-btn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.1);border:none;
+border-radius:50%;width:40px;height:40px;font-size:1.2em;cursor:pointer;z-index:10;
+display:flex;align-items:center;justify-content:center}
+
+.how-content{width:90%;max-height:70vh;overflow-y:auto;padding:16px;margin-top:6vh}
+.how-content h2{font-size:1.4em;margin-bottom:12px;color:#2c3e50}
+.how-content p{margin-bottom:12px;line-height:1.5;color:#555;font-size:0.95em}
+.scoring-table{width:100%;border-collapse:collapse;margin:12px 0}
+.scoring-table td{padding:6px 12px;border-bottom:1px solid #eee;font-size:0.9em}
+.scoring-table td:last-child{font-weight:700;text-align:right}
+
+.brand{position:fixed;bottom:8px;right:12px;font-size:0.7em;color:rgba(0,0,0,0.25);
+font-weight:600;letter-spacing:0.5px;z-index:999;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="brand">royabes.com</div>
+<div id="app">
+
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="title">Math Chef</div>
+    <div class="subtitle">Solve fast. Beat the clock.</div>
+    <div id="champion-banner" class="champion-banner" style="display:none"></div>
+    <div class="subtitle" style="margin-bottom:8px;font-size:0.85em">Who's playing?</div>
+    <div class="avatar-row" id="avatar-row"></div>
+    <button class="menu-btn btn-daily" onclick="startGame('daily')">Daily Challenge</button>
+    <button class="menu-btn btn-free" onclick="startGame('free')">Free Play</button>
+    <button class="menu-btn btn-lead" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="menu-btn btn-how" onclick="showScreen('howto')">How to Play</button>
+    <a href="index.html" class="menu-btn btn-home" style="text-align:center;text-decoration:none;display:block">All Games</a>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div class="game-header">
+      <div class="game-avatar" id="game-avatar"></div>
+      <div class="timer-display" id="timer">1:00</div>
+      <div class="score-display" id="score">0</div>
+    </div>
+    <div class="streak-bar">Streak: <span class="streak-count" id="streak">0</span></div>
+    <div class="problem-area">
+      <div class="problem-text" id="problem">7 + 5 = ?</div>
+    </div>
+    <div class="answer-grid" id="answers"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="screen">
+    <div class="results-title">Time's Up!</div>
+    <div class="results-stars" id="results-stars"></div>
+    <div class="results-score" id="results-correct">0</div>
+    <div class="results-detail" id="results-correct-label">correct answers</div>
+    <div class="results-detail" id="results-accuracy">Accuracy: 100%</div>
+    <div class="results-detail" id="results-streak">Best streak: 0</div>
+    <div id="new-record" class="new-record" style="display:none">New Personal Best!</div>
+    <button class="menu-btn btn-daily" onclick="startGame(lastMode)" style="margin-top:20px">Play Again</button>
+    <button class="menu-btn btn-lead" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="menu-btn btn-free" onclick="showScreen('home')">Home</button>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="leaderboard" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="title" style="font-size:1.6em;margin-top:6vh">Leaderboard</div>
+    <div class="lb-tabs">
+      <div class="lb-tab active" onclick="switchLbTab('today',this)">Today</div>
+      <div class="lb-tab" onclick="switchLbTab('alltime',this)">All Time</div>
+    </div>
+    <div class="lb-list" id="lb-list"></div>
+    <button class="menu-btn btn-free" onclick="showScreen('home')" style="margin-top:12px">Home</button>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div id="howto" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="how-content">
+      <h2>How to Play</h2>
+      <p>Solve as many math problems as you can in <strong>60 seconds</strong>! Tap the correct answer from the four choices shown.</p>
+      <p>Correct answers score a point. Wrong answers don't lose points, but they waste precious time!</p>
+      <h2 style="margin-top:16px">Difficulty</h2>
+      <p>Problems get harder as you build your streak:</p>
+      <table class="scoring-table">
+        <tr><td>Easy (first 5 correct)</td><td>Simple addition</td></tr>
+        <tr><td>Medium (6-15 correct)</td><td>+/- and basic multiply</td></tr>
+        <tr><td>Hard (16+ correct)</td><td>Larger numbers</td></tr>
+      </table>
+      <h2 style="margin-top:16px">Star Rating</h2>
+      <table class="scoring-table">
+        <tr><td>20+ correct</td><td>3 stars</td></tr>
+        <tr><td>12-19 correct</td><td>2 stars</td></tr>
+        <tr><td>Under 12</td><td>1 star</td></tr>
+      </table>
+      <h2 style="margin-top:16px">Daily Challenge</h2>
+      <p>Everyone gets the <strong>same problem sequence</strong> each day. Compare scores with your family!</p>
+      <h2 style="margin-top:16px">Tips</h2>
+      <p>Stay calm and tap quickly. Building streaks unlocks harder problems worth more bragging rights. Accuracy matters for tiebreaks on the leaderboard!</p>
+    </div>
+    <button class="menu-btn btn-daily" onclick="showScreen('home')" style="margin-top:12px">Got it!</button>
+  </div>
+
+</div>
+
+<script>
+// ===== AVATARS =====
+const AVATARS=[
+  {id:'bear',emoji:'\u{1F43B}',name:'Bear'},
+  {id:'fox',emoji:'\u{1F98A}',name:'Fox'},
+  {id:'frog',emoji:'\u{1F438}',name:'Frog'},
+  {id:'owl',emoji:'\u{1F989}',name:'Owl'},
+  {id:'cat',emoji:'\u{1F431}',name:'Cat'},
+  {id:'dog',emoji:'\u{1F436}',name:'Dog'},
+  {id:'penguin',emoji:'\u{1F427}',name:'Penguin'},
+  {id:'unicorn',emoji:'\u{1F984}',name:'Unicorn'}
+];
+
+// ===== SEEDED RNG =====
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return Math.abs(h)}
+
+// ===== STATE =====
+let currentAvatar=null;
+let rng=null;
+let gameTimer=null;
+let timeLeft=60;
+let totalCorrect=0;
+let totalAttempts=0;
+let currentStreak=0;
+let bestStreak=0;
+let lastMode='daily';
+let currentLbTab='today';
+let isLocked=false;
+let lastProblemStr='';
+
+// ===== INIT =====
+function init(){
+  renderAvatars();
+  loadAvatar();
+  updateChampion();
+}
+
+function renderAvatars(){
+  const row=document.getElementById('avatar-row');
+  row.innerHTML=AVATARS.map(a=>
+    `<div class="avatar-btn" data-id="${a.id}" onclick="selectAvatar('${a.id}')">${a.emoji}</div>`
+  ).join('');
+}
+
+function selectAvatar(id){
+  currentAvatar=AVATARS.find(a=>a.id===id);
+  localStorage.setItem('mc_avatar',id);
+  document.querySelectorAll('.avatar-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.id===id);
+  });
+}
+
+function loadAvatar(){
+  const saved=localStorage.getItem('mc_avatar');
+  if(saved&&AVATARS.find(a=>a.id===saved)){selectAvatar(saved)}
+  else{selectAvatar(AVATARS[0].id)}
+}
+
+// ===== SCREENS =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='home'){updateChampion()}
+  if(id==='leaderboard'){renderLeaderboard(currentLbTab)}
+}
+
+// ===== CHAMPION =====
+function updateChampion(){
+  const banner=document.getElementById('champion-banner');
+  const today=getTodayKey();
+  const scores=getScores().filter(s=>s.date===today);
+  if(scores.length===0){banner.style.display='none';return}
+  scores.sort((a,b)=>b.correct-a.correct||(b.accuracy-a.accuracy));
+  const champ=scores[0];
+  const av=AVATARS.find(a=>a.id===champ.avatar);
+  banner.textContent=`${av?av.emoji:''} ${av?av.name:'???'} is today's Math Champion! (${champ.correct} correct)`;
+  banner.style.display='block';
+}
+
+// ===== PROBLEM GENERATION =====
+function generateProblem(rngFn,difficulty){
+  let a,b,op,opStr,answer,problemStr;
+  let attempts=0;
+  do{
+    attempts++;
+    if(difficulty==='easy'){
+      // single digit + single digit
+      a=Math.floor(rngFn()*9)+1;
+      b=Math.floor(rngFn()*9)+1;
+      op='+';
+      opStr='+';
+      answer=a+b;
+    }else if(difficulty==='medium'){
+      const opRoll=rngFn();
+      if(opRoll<0.4){
+        // two digit + single digit
+        a=Math.floor(rngFn()*90)+10;
+        b=Math.floor(rngFn()*9)+1;
+        op='+';opStr='+';
+        answer=a+b;
+      }else if(opRoll<0.7){
+        // two digit - single digit (ensure positive)
+        a=Math.floor(rngFn()*90)+10;
+        b=Math.floor(rngFn()*9)+1;
+        op='-';opStr='-';
+        answer=a-b;
+      }else{
+        // simple multiplication
+        a=Math.floor(rngFn()*8)+2;
+        b=Math.floor(rngFn()*8)+2;
+        op='x';opStr='x';
+        answer=a*b;
+      }
+    }else{
+      // hard
+      const opRoll=rngFn();
+      if(opRoll<0.35){
+        // two digit + two digit
+        a=Math.floor(rngFn()*90)+10;
+        b=Math.floor(rngFn()*90)+10;
+        op='+';opStr='+';
+        answer=a+b;
+      }else if(opRoll<0.65){
+        // two digit - two digit (ensure positive)
+        a=Math.floor(rngFn()*90)+10;
+        b=Math.floor(rngFn()*9)+1;// keep b smaller
+        if(rngFn()>0.5){b=Math.floor(rngFn()*40)+10;}// sometimes two digit
+        if(b>a){const tmp=a;a=b;b=tmp;}// swap to keep positive
+        op='-';opStr='-';
+        answer=a-b;
+      }else{
+        // larger multiplication
+        a=Math.floor(rngFn()*10)+3;
+        b=Math.floor(rngFn()*10)+3;
+        op='x';opStr='x';
+        answer=a*b;
+      }
+    }
+    problemStr=`${a} ${opStr} ${b}`;
+  }while(answer<0||(problemStr===lastProblemStr&&attempts<20));
+
+  lastProblemStr=problemStr;
+
+  // Generate wrong answers
+  const wrongs=new Set();
+  let safetyCount=0;
+  while(wrongs.size<3&&safetyCount<100){
+    safetyCount++;
+    let offset=Math.floor(rngFn()*10)-5;
+    if(offset===0)offset=Math.floor(rngFn()*2)===0?-1:1;
+    let wrong=answer+offset;
+    if(wrong<0)wrong=answer+Math.abs(offset);
+    if(wrong!==answer&&!wrongs.has(wrong)){
+      wrongs.add(wrong);
+    }
+  }
+
+  // Build answer choices and shuffle
+  const choices=[answer,...wrongs];
+  for(let i=choices.length-1;i>0;i--){
+    const j=Math.floor(rngFn()*(i+1));
+    [choices[i],choices[j]]=[choices[j],choices[i]];
+  }
+
+  return{
+    text:`${problemStr} = ?`,
+    answer:answer,
+    choices:choices
+  };
+}
+
+function getDifficulty(){
+  if(totalCorrect<5)return'easy';
+  if(totalCorrect<16)return'medium';
+  return'hard';
+}
+
+// ===== GAME =====
+function startGame(mode){
+  if(!currentAvatar)selectAvatar(AVATARS[0].id);
+  lastMode=mode;
+
+  let seed;
+  if(mode==='daily'){seed=hashStr('mathchef'+getTodayKey())}
+  else{seed=hashStr(Date.now().toString()+Math.random().toString())}
+  rng=mulberry32(seed);
+
+  totalCorrect=0;
+  totalAttempts=0;
+  currentStreak=0;
+  bestStreak=0;
+  timeLeft=60;
+  isLocked=false;
+  lastProblemStr='';
+
+  document.getElementById('game-avatar').textContent=currentAvatar.emoji;
+  document.getElementById('score').textContent='0';
+  document.getElementById('streak').textContent='0';
+  document.getElementById('timer').textContent='1:00';
+  document.getElementById('timer').classList.remove('urgent');
+
+  showScreen('game');
+  showProblem();
+  startTimer();
+}
+
+function showProblem(){
+  const difficulty=getDifficulty();
+  const problem=generateProblem(rng,difficulty);
+
+  document.getElementById('problem').textContent=problem.text;
+
+  const container=document.getElementById('answers');
+  container.innerHTML=problem.choices.map((c,i)=>
+    `<button class="answer-btn" data-value="${c}" data-correct="${c===problem.answer?1:0}" onclick="handleAnswer(this,${c},${problem.answer})">${c}</button>`
+  ).join('');
+}
+
+function handleAnswer(btn,chosen,correct){
+  if(isLocked)return;
+  isLocked=true;
+  totalAttempts++;
+
+  const allBtns=document.querySelectorAll('.answer-btn');
+
+  if(chosen===correct){
+    // Correct
+    totalCorrect++;
+    currentStreak++;
+    if(currentStreak>bestStreak)bestStreak=currentStreak;
+
+    btn.classList.add('correct-flash');
+    allBtns.forEach(b=>{if(b!==btn)b.classList.add('disabled')});
+
+    document.getElementById('score').textContent=totalCorrect;
+    document.getElementById('streak').textContent=currentStreak;
+
+    setTimeout(()=>{
+      isLocked=false;
+      showProblem();
+    },250);
+  }else{
+    // Wrong
+    currentStreak=0;
+    btn.classList.add('wrong-flash');
+
+    // Highlight the correct answer
+    allBtns.forEach(b=>{
+      if(b.dataset.correct==='1')b.classList.add('correct-flash');
+      b.classList.add('disabled');
+    });
+
+    document.getElementById('streak').textContent=currentStreak;
+
+    setTimeout(()=>{
+      isLocked=false;
+      showProblem();
+    },600);
+  }
+}
+
+function startTimer(){
+  clearInterval(gameTimer);
+  gameTimer=setInterval(()=>{
+    timeLeft--;
+    if(timeLeft<=0){
+      timeLeft=0;
+      clearInterval(gameTimer);
+      endGame();
+    }
+    const m=Math.floor(timeLeft/60);
+    const s=timeLeft%60;
+    const timerEl=document.getElementById('timer');
+    timerEl.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    if(timeLeft<=10){timerEl.classList.add('urgent')}
+    else{timerEl.classList.remove('urgent')}
+  },1000);
+}
+
+function endGame(){
+  isLocked=true;
+  clearInterval(gameTimer);
+  saveScore();
+  showResults();
+}
+
+// ===== RESULTS =====
+function showResults(){
+  const accuracy=totalAttempts>0?Math.round((totalCorrect/totalAttempts)*100):0;
+
+  document.getElementById('results-correct').textContent=totalCorrect;
+  document.getElementById('results-correct-label').textContent='correct answers';
+  document.getElementById('results-accuracy').textContent=`Accuracy: ${accuracy}%`;
+  document.getElementById('results-streak').textContent=`Best streak: ${bestStreak}`;
+
+  // Stars
+  let stars=1;
+  if(totalCorrect>=20)stars=3;
+  else if(totalCorrect>=12)stars=2;
+  document.getElementById('results-stars').textContent=
+    '\u{2B50}'.repeat(stars)+'\u{2606}'.repeat(3-stars);
+
+  // Check personal best
+  const scores=getScores().filter(s=>s.avatar===currentAvatar.id);
+  const best=scores.length>1?Math.max(...scores.slice(0,-1).map(s=>s.correct)):0;
+  document.getElementById('new-record').style.display=
+    (totalCorrect>best&&scores.length>0)?'block':'none';
+
+  showScreen('results');
+}
+
+// ===== STORAGE =====
+function getTodayKey(){return new Date().toISOString().slice(0,10)}
+
+function getScores(){
+  try{return JSON.parse(localStorage.getItem('mc_scores')||'[]')}
+  catch(e){return[]}
+}
+
+function saveScore(){
+  const accuracy=totalAttempts>0?Math.round((totalCorrect/totalAttempts)*100):0;
+  const scores=getScores();
+  scores.push({
+    avatar:currentAvatar.id,
+    correct:totalCorrect,
+    attempts:totalAttempts,
+    accuracy:accuracy,
+    streak:bestStreak,
+    date:getTodayKey(),
+    mode:lastMode,
+    ts:Date.now()
+  });
+  if(scores.length>500)scores.splice(0,scores.length-500);
+  try{localStorage.setItem('mc_scores',JSON.stringify(scores))}catch(e){}
+}
+
+// ===== LEADERBOARD =====
+function switchLbTab(tab,el){
+  currentLbTab=tab;
+  document.querySelectorAll('.lb-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderLeaderboard(tab);
+}
+
+function renderLeaderboard(tab){
+  const scores=getScores();
+  let filtered;
+  if(tab==='today'){filtered=scores.filter(s=>s.date===getTodayKey())}
+  else{filtered=scores}
+
+  // Best score per avatar
+  const best={};
+  filtered.forEach(s=>{
+    if(!best[s.avatar]||s.correct>best[s.avatar].correct||(s.correct===best[s.avatar].correct&&s.accuracy>best[s.avatar].accuracy)){
+      best[s.avatar]=s;
+    }
+  });
+
+  const sorted=Object.values(best).sort((a,b)=>b.correct-a.correct||(b.accuracy-a.accuracy));
+  const list=document.getElementById('lb-list');
+
+  if(sorted.length===0){
+    list.innerHTML='<div class="lb-empty">No scores yet. Go play!</div>';
+    return;
+  }
+
+  list.innerHTML=sorted.map((s,i)=>{
+    const av=AVATARS.find(a=>a.id===s.avatar);
+    const rankText=i===0?'\u{1F451}':i===1?'\u{1F948}':i===2?'\u{1F949}':(i+1);
+    return`<div class="lb-entry">
+      <div class="lb-rank">${rankText}</div>
+      <div class="lb-avatar">${av?av.emoji:'?'}</div>
+      <div style="font-weight:600">${av?av.name:'???'}</div>
+      <div class="lb-detail">${s.accuracy}%</div>
+      <div class="lb-score">${s.correct} correct</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== PREVENT ZOOM =====
+document.addEventListener('dblclick',e=>e.preventDefault());
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
