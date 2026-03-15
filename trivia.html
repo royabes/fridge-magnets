@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Kitchen Quiz</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow-x:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(145deg,#e8e8e8 0%,#d0d0d0 50%,#c8c8c8 100%);display:flex;justify-content:center;align-items:flex-start}
+#app{width:100%;max-width:420px;min-height:100vh;position:relative;overflow:hidden}
+#app::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+background:repeating-linear-gradient(90deg,transparent,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 4px);
+pointer-events:none;z-index:0}
+
+.screen{position:absolute;top:0;left:0;width:100%;min-height:100%;display:none;flex-direction:column;align-items:center;padding:16px;z-index:1}
+.screen.active{display:flex}
+
+.title{font-size:2.4em;font-weight:900;text-align:center;margin-top:8vh;margin-bottom:8px;
+background:linear-gradient(135deg,#e74c3c,#e67e22,#f1c40f,#2ecc71,#3498db,#9b59b6);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+.subtitle{color:#666;font-size:0.95em;margin-bottom:24px;text-align:center}
+
+.avatar-row{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;justify-content:center}
+.avatar-btn{width:56px;height:56px;border-radius:16px;border:3px solid #ddd;background:#fff;
+font-size:1.8em;display:flex;align-items:center;justify-content:center;cursor:pointer;
+transition:transform 0.15s,border-color 0.15s;box-shadow:2px 3px 6px rgba(0,0,0,0.15)}
+.avatar-btn.selected{border-color:#e74c3c;transform:scale(1.15);box-shadow:2px 3px 12px rgba(231,76,60,0.4)}
+.avatar-btn:active{transform:scale(0.95)}
+
+.menu-btn{width:85%;max-width:300px;padding:16px;border:none;border-radius:14px;font-size:1.15em;
+font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:3px 4px 8px rgba(0,0,0,0.2);
+transition:transform 0.1s;position:relative;overflow:hidden}
+.menu-btn:active{transform:scale(0.97)}
+.btn-daily{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+.btn-free{background:linear-gradient(135deg,#3498db,#2980b9);color:#fff}
+.btn-lead{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff}
+.btn-how{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff}
+.btn-home{background:linear-gradient(135deg,#95a5a6,#7f8c8d);color:#fff}
+
+.champion-banner{background:linear-gradient(135deg,#f39c12,#e67e22);color:#fff;padding:10px 20px;
+border-radius:12px;font-weight:700;font-size:0.95em;margin-bottom:16px;text-align:center;
+box-shadow:2px 3px 8px rgba(0,0,0,0.2);width:85%;max-width:300px}
+
+/* GAME */
+.game-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 4px;margin-bottom:4px}
+.game-avatar{font-size:1.6em}
+.question-counter{font-size:1.3em;font-weight:900;color:#2c3e50}
+.score-display{font-size:1.2em;font-weight:700;color:#2c3e50;background:#fff;padding:4px 14px;
+border-radius:10px;box-shadow:2px 2px 6px rgba(0,0,0,0.15)}
+
+.category-badge{display:inline-block;padding:6px 18px;border-radius:20px;color:#fff;font-weight:700;
+font-size:0.85em;margin-bottom:12px;letter-spacing:0.5px;box-shadow:2px 2px 6px rgba(0,0,0,0.15)}
+.cat-food{background:#e67e22}
+.cat-animals{background:#2ecc71}
+.cat-science{background:#3498db}
+.cat-geography{background:#9b59b6}
+.cat-fun{background:#e74c3c}
+
+.question-area{width:92%;max-width:380px;background:#fff;border-radius:18px;padding:20px 18px;
+margin-bottom:16px;box-shadow:3px 4px 10px rgba(0,0,0,0.12);min-height:80px;
+display:flex;align-items:center;justify-content:center;text-align:center}
+.question-text{font-size:1.2em;font-weight:600;color:#2c3e50;line-height:1.4}
+
+.answers-area{width:92%;max-width:380px;display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.answer-btn{width:100%;min-height:56px;padding:14px 18px;border:2px solid #e0e0e0;border-radius:14px;
+background:#fff;font-size:1.05em;font-weight:600;color:#2c3e50;cursor:pointer;text-align:left;
+box-shadow:2px 3px 6px rgba(0,0,0,0.1);transition:transform 0.1s,background 0.15s,border-color 0.15s}
+.answer-btn:active{transform:scale(0.98)}
+.answer-btn.correct{background:#2ecc71;border-color:#27ae60;color:#fff}
+.answer-btn.wrong{background:#e74c3c;border-color:#c0392b;color:#fff}
+.answer-btn.reveal{background:#2ecc71;border-color:#27ae60;color:#fff;opacity:0.7}
+.answer-btn.disabled{pointer-events:none;opacity:0.6}
+.answer-btn .check-mark::before{content:' \u2713';font-weight:900}
+.answer-btn .x-mark::before{content:' \u2717';font-weight:900}
+
+.progress-dots{display:flex;gap:8px;justify-content:center;margin-top:auto;padding-bottom:8px}
+.dot{width:12px;height:12px;border-radius:50%;background:#ddd;transition:all 0.2s}
+.dot.current{width:16px;height:16px;background:#3498db;margin-top:-2px}
+.dot.answered-correct{background:#2ecc71}
+.dot.answered-wrong{background:#e74c3c}
+
+/* RESULTS */
+.results-title{font-size:2em;font-weight:900;margin-top:6vh;margin-bottom:4px;color:#2c3e50}
+.results-score{font-size:3.5em;font-weight:900;margin-bottom:4px;color:#f39c12}
+.results-sub{font-size:1em;color:#888;margin-bottom:4px}
+.results-stars{font-size:2.5em;margin:8px 0}
+.new-record{color:#e74c3c;font-weight:700;font-size:1.1em;margin-bottom:8px}
+
+.results-review{width:90%;max-width:360px;max-height:30vh;overflow-y:auto;margin-bottom:12px}
+.review-item{display:flex;align-items:flex-start;padding:8px 10px;background:#fff;border-radius:10px;
+margin-bottom:6px;box-shadow:1px 2px 4px rgba(0,0,0,0.08);gap:10px}
+.review-icon{font-size:1.2em;flex-shrink:0;margin-top:2px}
+.review-text{font-size:0.85em;color:#555;line-height:1.3}
+.review-correct{color:#27ae60;font-weight:600;font-size:0.8em}
+
+/* LEADERBOARD */
+.lb-tabs{display:flex;gap:8px;margin-top:8vh;margin-bottom:16px}
+.lb-tab{padding:8px 16px;border-radius:10px;border:2px solid #ddd;background:#fff;font-weight:700;
+cursor:pointer;font-size:0.9em}
+.lb-tab.active{background:#3498db;color:#fff;border-color:#3498db}
+.lb-list{width:90%;flex:1;overflow-y:auto}
+.lb-entry{display:flex;align-items:center;padding:10px 12px;background:#fff;border-radius:12px;
+margin-bottom:8px;box-shadow:2px 2px 6px rgba(0,0,0,0.1)}
+.lb-rank{font-size:1.3em;font-weight:900;width:36px;text-align:center;color:#666}
+.lb-avatar{font-size:1.5em;margin:0 10px}
+.lb-score{margin-left:auto;font-size:1.1em;font-weight:800;color:#2c3e50}
+.lb-detail{font-size:0.75em;color:#888;margin-left:8px}
+.lb-empty{text-align:center;color:#999;padding:40px;font-size:1.1em}
+
+.back-btn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.1);border:none;
+border-radius:50%;width:40px;height:40px;font-size:1.2em;cursor:pointer;z-index:10;
+display:flex;align-items:center;justify-content:center}
+
+.how-content{width:90%;max-height:70vh;overflow-y:auto;padding:16px;margin-top:6vh}
+.how-content h2{font-size:1.4em;margin-bottom:12px;color:#2c3e50}
+.how-content p{margin-bottom:12px;line-height:1.5;color:#555;font-size:0.95em}
+.scoring-table{width:100%;border-collapse:collapse;margin:12px 0}
+.scoring-table td{padding:6px 12px;border-bottom:1px solid #eee;font-size:0.9em}
+.scoring-table td:last-child{font-weight:700;text-align:right}
+
+.brand{position:fixed;bottom:8px;right:12px;font-size:0.7em;color:rgba(0,0,0,0.25);
+font-weight:600;letter-spacing:0.5px;z-index:999;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="brand">royabes.com</div>
+<div id="app">
+
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="title">Kitchen Quiz</div>
+    <div class="subtitle">10 questions. How much do you know?</div>
+    <div id="champion-banner" class="champion-banner" style="display:none"></div>
+    <div class="subtitle" style="margin-bottom:8px;font-size:0.85em">Who's playing?</div>
+    <div class="avatar-row" id="avatar-row"></div>
+    <button class="menu-btn btn-daily" onclick="startGame('daily')">Daily Challenge</button>
+    <button class="menu-btn btn-free" onclick="startGame('free')">Free Play</button>
+    <button class="menu-btn btn-lead" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="menu-btn btn-how" onclick="showScreen('howto')">How to Play</button>
+    <a href="index.html" class="menu-btn btn-home" style="text-align:center;text-decoration:none;display:block">All Games</a>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div class="game-header">
+      <div class="game-avatar" id="game-avatar"></div>
+      <div class="question-counter" id="question-counter">1/10</div>
+      <div class="score-display" id="score-display">0/0</div>
+    </div>
+    <div id="category-badge" class="category-badge cat-food">Food & Kitchen</div>
+    <div class="question-area">
+      <div class="question-text" id="question-text">Loading...</div>
+    </div>
+    <div class="answers-area" id="answers-area"></div>
+    <div class="progress-dots" id="progress-dots"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results" class="screen">
+    <div class="results-title" id="results-title">Nice!</div>
+    <div class="results-stars" id="results-stars"></div>
+    <div class="results-score" id="results-score">0/10</div>
+    <div class="results-sub" id="results-sub">correct answers</div>
+    <div id="new-record" class="new-record" style="display:none">New Personal Best!</div>
+    <div class="results-review" id="results-review"></div>
+    <button class="menu-btn btn-daily" onclick="startGame(lastMode)">Play Again</button>
+    <button class="menu-btn btn-lead" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="menu-btn btn-free" onclick="showScreen('home')">Home</button>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="leaderboard" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="title" style="font-size:1.6em;margin-top:6vh">Leaderboard</div>
+    <div class="lb-tabs">
+      <div class="lb-tab active" onclick="switchLbTab('today',this)">Today</div>
+      <div class="lb-tab" onclick="switchLbTab('alltime',this)">All Time</div>
+    </div>
+    <div class="lb-list" id="lb-list"></div>
+    <button class="menu-btn btn-free" onclick="showScreen('home')" style="margin-top:12px">Home</button>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div id="howto" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="how-content">
+      <h2>How to Play</h2>
+      <p>Answer 10 trivia questions from categories like Food, Animals, Science, Geography, and Fun Facts.</p>
+      <p>Tap one of the four answer buttons. If you're right, it flashes green. If you're wrong, your choice flashes red and the correct answer is shown in green.</p>
+      <p>No time limit per question -- take your time and think!</p>
+      <h2 style="margin-top:16px">Star Rating</h2>
+      <table class="scoring-table">
+        <tr><td>9-10 correct</td><td>3 stars</td></tr>
+        <tr><td>6-8 correct</td><td>2 stars</td></tr>
+        <tr><td>0-5 correct</td><td>1 star</td></tr>
+      </table>
+      <h2 style="margin-top:16px">Daily Challenge</h2>
+      <p>Everyone gets the <strong>same 10 questions</strong> each day, with answers in the same shuffled order. Compare scores with your family!</p>
+      <h2 style="margin-top:16px">Free Play</h2>
+      <p>Random 10 questions each time you play. Great for practice!</p>
+    </div>
+    <button class="menu-btn btn-daily" onclick="showScreen('home')" style="margin-top:12px">Got it!</button>
+  </div>
+
+</div>
+
+<script>
+// ===== QUESTION BANK (100 questions) =====
+const QUESTIONS=[
+// --- Food & Kitchen (25) ---
+{cat:'Food & Kitchen',q:'What grain is used to make sake?',a:['Wheat','Barley','Corn','Rice'],c:3},
+{cat:'Food & Kitchen',q:'What vitamin are oranges best known for?',a:['Vitamin A','Vitamin D','Vitamin B12','Vitamin C'],c:3},
+{cat:'Food & Kitchen',q:'At what temperature (F) does water boil at sea level?',a:['180','200','220','212'],c:3},
+{cat:'Food & Kitchen',q:'What country is the origin of croissants?',a:['France','Italy','Spain','Austria'],c:3},
+{cat:'Food & Kitchen',q:'What is the most expensive spice in the world by weight?',a:['Vanilla','Cardamom','Cinnamon','Saffron'],c:3},
+{cat:'Food & Kitchen',q:'Which nut is used to make marzipan?',a:['Cashew','Walnut','Pistachio','Almond'],c:3},
+{cat:'Food & Kitchen',q:'What is the main ingredient in hummus?',a:['Lentils','Black beans','White beans','Chickpeas'],c:3},
+{cat:'Food & Kitchen',q:'Wasabi is traditionally made from the root of what plant?',a:['Ginger','Horseradish','Turmeric','Japanese horseradish (wasabi)'],c:3},
+{cat:'Food & Kitchen',q:'What type of pasta has a name meaning "little tongues"?',a:['Penne','Rigatoni','Farfalle','Linguine'],c:3},
+{cat:'Food & Kitchen',q:'How many teaspoons are in one tablespoon?',a:['2','4','5','3'],c:3},
+{cat:'Food & Kitchen',q:'What fruit is known as the "king of fruits" in Southeast Asia?',a:['Mango','Jackfruit','Lychee','Durian'],c:3},
+{cat:'Food & Kitchen',q:'What gas makes bread rise?',a:['Oxygen','Nitrogen','Hydrogen','Carbon dioxide'],c:3},
+{cat:'Food & Kitchen',q:'What country does feta cheese originate from?',a:['Italy','Turkey','France','Greece'],c:3},
+{cat:'Food & Kitchen',q:'What mineral gives red meat its color?',a:['Copper','Zinc','Calcium','Iron'],c:3},
+{cat:'Food & Kitchen',q:'Sushi literally translates to what in Japanese?',a:['Raw fish','Seaweed roll','Rice bowl','Sour rice'],c:3},
+{cat:'Food & Kitchen',q:'What is the hottest chili pepper on the Scoville scale?',a:['Ghost pepper','Habanero','Trinidad Scorpion','Carolina Reaper'],c:3},
+{cat:'Food & Kitchen',q:'What cooking method does "sauté" translate to from French?',a:['To boil','To roast','To steam','To jump'],c:3},
+{cat:'Food & Kitchen',q:'How many cups are in one US quart?',a:['2','3','6','4'],c:3},
+{cat:'Food & Kitchen',q:'Which fruit has its seeds on the outside?',a:['Raspberry','Blueberry','Kiwi','Strawberry'],c:3},
+{cat:'Food & Kitchen',q:'What oil is traditionally used in Thai cooking?',a:['Olive oil','Sesame oil','Vegetable oil','Coconut oil'],c:3},
+{cat:'Food & Kitchen',q:'What is tofu made from?',a:['Rice','Wheat','Corn','Soybeans'],c:3},
+{cat:'Food & Kitchen',q:'What is the most consumed fruit in the world?',a:['Apple','Orange','Mango','Banana'],c:3},
+{cat:'Food & Kitchen',q:'Which vitamin is produced when skin is exposed to sunlight?',a:['Vitamin A','Vitamin C','Vitamin B12','Vitamin D'],c:3},
+{cat:'Food & Kitchen',q:'What vegetable was the first to be grown in space?',a:['Carrot','Tomato','Lettuce','Potato'],c:3},
+{cat:'Food & Kitchen',q:'What is the only fruit with seeds on the outside that is also in the rose family?',a:['Raspberry','Blackberry','Cherry','Strawberry'],c:3},
+
+// --- Animals (20) ---
+{cat:'Animals',q:'What is a group of flamingos called?',a:['A flock','A gaggle','A colony','A flamboyance'],c:3},
+{cat:'Animals',q:'How many hearts does an octopus have?',a:['1','2','4','3'],c:3},
+{cat:'Animals',q:'What is the fastest land animal?',a:['Lion','Gazelle','Pronghorn','Cheetah'],c:3},
+{cat:'Animals',q:'What animal has the longest lifespan?',a:['Elephant','Whale','Giant tortoise','Arctic clam (ocean quahog)'],c:3},
+{cat:'Animals',q:'What is a group of owls called?',a:['A flock','A murder','A pack','A parliament'],c:3},
+{cat:'Animals',q:'What mammal can truly fly?',a:['Flying squirrel','Sugar glider','Colugo','Bat'],c:3},
+{cat:'Animals',q:'How many legs does a lobster have?',a:['6','8','12','10'],c:3},
+{cat:'Animals',q:'What is the largest species of shark?',a:['Great white shark','Hammerhead shark','Tiger shark','Whale shark'],c:3},
+{cat:'Animals',q:'What animal has the highest blood pressure?',a:['Elephant','Blue whale','Horse','Giraffe'],c:3},
+{cat:'Animals',q:'What is the only continent with no native reptiles?',a:['Arctic','Australia','Greenland','Antarctica'],c:3},
+{cat:'Animals',q:'How long can a snail sleep continuously?',a:['1 month','6 months','1 year','3 years'],c:3},
+{cat:'Animals',q:'What color is a polar bear\'s skin?',a:['White','Pink','Gray','Black'],c:3},
+{cat:'Animals',q:'What animal has rectangular pupils?',a:['Cat','Horse','Owl','Goat'],c:3},
+{cat:'Animals',q:'What is a baby kangaroo called?',a:['Cub','Kit','Pup','Joey'],c:3},
+{cat:'Animals',q:'What is the largest living bird by wingspan?',a:['Andean condor','Bald eagle','Albatross','Wandering albatross'],c:3},
+{cat:'Animals',q:'How many noses does a slug have?',a:['1','2','3','4'],c:3},
+{cat:'Animals',q:'What animal can rotate its head nearly 270 degrees?',a:['Eagle','Hawk','Parrot','Owl'],c:3},
+{cat:'Animals',q:'What is the national animal of Scotland?',a:['Lion','Stag','Highland cow','Unicorn'],c:3},
+{cat:'Animals',q:'What is the only mammal that lays eggs?',a:['Armadillo','Pangolin','Opossum','Platypus'],c:3},
+{cat:'Animals',q:'What insect can carry 50 times its body weight?',a:['Bee','Beetle','Spider','Ant'],c:3},
+
+// --- Science (20) ---
+{cat:'Science',q:'What planet is closest to the sun?',a:['Venus','Earth','Mars','Mercury'],c:3},
+{cat:'Science',q:'What gas do plants absorb from the air?',a:['Oxygen','Nitrogen','Hydrogen','Carbon dioxide'],c:3},
+{cat:'Science',q:'What is the hardest natural substance?',a:['Titanium','Quartz','Sapphire','Diamond'],c:3},
+{cat:'Science',q:'What is the chemical symbol for gold?',a:['Go','Gd','Ag','Au'],c:3},
+{cat:'Science',q:'How many bones are in the human body (adult)?',a:['186','196','216','206'],c:3},
+{cat:'Science',q:'What is the speed of light in miles per second (approximately)?',a:['86,000','136,000','246,000','186,000'],c:3},
+{cat:'Science',q:'What is the most abundant gas in Earth\'s atmosphere?',a:['Oxygen','Carbon dioxide','Argon','Nitrogen'],c:3},
+{cat:'Science',q:'What organ in the human body uses the most energy?',a:['Heart','Liver','Lungs','Brain'],c:3},
+{cat:'Science',q:'What is the smallest planet in our solar system?',a:['Mars','Venus','Pluto','Mercury'],c:3},
+{cat:'Science',q:'How many chromosomes do humans have?',a:['42','44','48','46'],c:3},
+{cat:'Science',q:'What type of rock is formed by cooling lava?',a:['Sedimentary','Metamorphic','Mineral','Ignite (igneous)'],c:3},
+{cat:'Science',q:'What is the chemical formula for water?',a:['HO','H3O','OH2','H2O'],c:3},
+{cat:'Science',q:'What part of the cell contains DNA?',a:['Mitochondria','Ribosome','Cell membrane','Nucleus'],c:3},
+{cat:'Science',q:'What force keeps us on the ground?',a:['Magnetism','Friction','Inertia','Gravity'],c:3},
+{cat:'Science',q:'What temperature scale has absolute zero as its starting point?',a:['Celsius','Fahrenheit','Rankine','Kelvin'],c:3},
+{cat:'Science',q:'How many teeth does an adult human typically have?',a:['28','30','36','32'],c:3},
+{cat:'Science',q:'What is the largest organ of the human body?',a:['Liver','Lungs','Heart','Skin'],c:3},
+{cat:'Science',q:'What element does the symbol "Fe" represent?',a:['Fluorine','Fermium','Lead','Iron'],c:3},
+{cat:'Science',q:'How long does it take light from the sun to reach Earth?',a:['1 minute','4 minutes','12 minutes','About 8 minutes'],c:3},
+{cat:'Science',q:'What state of matter is plasma?',a:['Solid','Liquid','Gas','The fourth state of matter'],c:3},
+
+// --- Geography (15) ---
+{cat:'Geography',q:'What is the largest ocean on Earth?',a:['Atlantic','Indian','Arctic','Pacific'],c:3},
+{cat:'Geography',q:'What country has the most people?',a:['United States','Indonesia','Brazil','India'],c:3},
+{cat:'Geography',q:'What is the smallest country in the world?',a:['Monaco','San Marino','Liechtenstein','Vatican City'],c:3},
+{cat:'Geography',q:'What is the longest river in the world?',a:['Amazon','Mississippi','Yangtze','Nile'],c:3},
+{cat:'Geography',q:'What is the driest continent?',a:['Africa','Australia','Asia','Antarctica'],c:3},
+{cat:'Geography',q:'What country has the most time zones?',a:['Russia','United States','China','France'],c:3},
+{cat:'Geography',q:'What is the tallest mountain on Earth?',a:['K2','Kangchenjunga','Lhotse','Mount Everest'],c:3},
+{cat:'Geography',q:'What is the capital of Australia?',a:['Sydney','Melbourne','Brisbane','Canberra'],c:3},
+{cat:'Geography',q:'In which continent is the Sahara Desert?',a:['Asia','South America','Australia','Africa'],c:3},
+{cat:'Geography',q:'What is the largest country by area?',a:['Canada','China','United States','Russia'],c:3},
+{cat:'Geography',q:'What two continents does the Ural mountain range separate?',a:['Africa and Asia','North and South America','Asia and Australia','Europe and Asia'],c:3},
+{cat:'Geography',q:'What is the deepest ocean trench?',a:['Tonga Trench','Puerto Rico Trench','Java Trench','Mariana Trench'],c:3},
+{cat:'Geography',q:'Which country is both a continent and a country?',a:['Greenland','New Zealand','Antarctica','Australia'],c:3},
+{cat:'Geography',q:'What is the most populous city in the world?',a:['Delhi','Shanghai','Beijing','Tokyo'],c:3},
+{cat:'Geography',q:'What river flows through Paris?',a:['Thames','Rhine','Danube','Seine'],c:3},
+
+// --- Fun Facts (20) ---
+{cat:'Fun Facts',q:'How many bones does a human adult have?',a:['186','196','216','206'],c:3},
+{cat:'Fun Facts',q:'What color are airplane "black boxes" actually?',a:['Black','White','Blue','Bright orange'],c:3},
+{cat:'Fun Facts',q:'What is the most common letter in the English language?',a:['T','A','S','E'],c:3},
+{cat:'Fun Facts',q:'How many years is a millennium?',a:['100','500','10000','1000'],c:3},
+{cat:'Fun Facts',q:'What is the only number spelled with letters in alphabetical order?',a:['One','Ten','Eight','Forty'],c:3},
+{cat:'Fun Facts',q:'How many sides does a hexagon have?',a:['5','7','8','6'],c:3},
+{cat:'Fun Facts',q:'What is the dot over the letter "i" called?',a:['Point','Spot','Dot','Tittle'],c:3},
+{cat:'Fun Facts',q:'What is the rarest M&M color?',a:['Red','Yellow','Blue','Brown'],c:3},
+{cat:'Fun Facts',q:'How many dimples are on a regulation golf ball?',a:['252','400','500','336'],c:3},
+{cat:'Fun Facts',q:'What is the fear of spiders called?',a:['Claustrophobia','Acrophobia','Entomophobia','Arachnophobia'],c:3},
+{cat:'Fun Facts',q:'What does "www" stand for in a website address?',a:['Wide Web World','Web World Wide','World Web Wide','World Wide Web'],c:3},
+{cat:'Fun Facts',q:'What is the national sport of Japan?',a:['Karate','Judo','Kendo','Sumo wrestling'],c:3},
+{cat:'Fun Facts',q:'How many strings does a standard guitar have?',a:['4','5','8','6'],c:3},
+{cat:'Fun Facts',q:'What is the hardest working muscle in the human body?',a:['Bicep','Quadricep','Gluteus maximus','Heart'],c:3},
+{cat:'Fun Facts',q:'What does a Richter scale measure?',a:['Wind speed','Temperature','Sound','Earthquake intensity'],c:3},
+{cat:'Fun Facts',q:'Which planet has the most moons?',a:['Jupiter','Neptune','Uranus','Saturn'],c:3},
+{cat:'Fun Facts',q:'What animal can be seen on the Porsche logo?',a:['Bull','Lion','Eagle','Horse'],c:3},
+{cat:'Fun Facts',q:'What is the most spoken language in the world by total speakers?',a:['Spanish','Hindi','Mandarin','English'],c:3},
+{cat:'Fun Facts',q:'How many keys are on a standard piano?',a:['76','80','92','88'],c:3},
+{cat:'Fun Facts',q:'What year did the Titanic sink?',a:['1905','1910','1915','1912'],c:3}
+];
+
+// ===== AVATARS =====
+const AVATARS=[
+  {id:'bear',emoji:'\u{1F43B}',name:'Bear'},
+  {id:'fox',emoji:'\u{1F98A}',name:'Fox'},
+  {id:'frog',emoji:'\u{1F438}',name:'Frog'},
+  {id:'owl',emoji:'\u{1F989}',name:'Owl'},
+  {id:'cat',emoji:'\u{1F431}',name:'Cat'},
+  {id:'dog',emoji:'\u{1F436}',name:'Dog'},
+  {id:'penguin',emoji:'\u{1F427}',name:'Penguin'},
+  {id:'unicorn',emoji:'\u{1F984}',name:'Unicorn'}
+];
+
+// ===== CATEGORY CONFIG =====
+const CAT_CLASS={
+  'Food & Kitchen':'cat-food',
+  'Animals':'cat-animals',
+  'Science':'cat-science',
+  'Geography':'cat-geography',
+  'Fun Facts':'cat-fun'
+};
+
+// ===== SEEDED RNG =====
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t^=t+Math.imul(t^t>>>7,61|t);return((t^t>>>14)>>>0)/4294967296}}
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0}return Math.abs(h)}
+
+// ===== STATE =====
+let currentAvatar=null;
+let lastMode='daily';
+let currentLbTab='today';
+let gameQuestions=[];
+let currentQ=0;
+let score=0;
+let answered=false;
+let roundResults=[];
+
+// ===== INIT =====
+function init(){
+  renderAvatars();
+  loadAvatar();
+  updateChampion();
+}
+
+function renderAvatars(){
+  const row=document.getElementById('avatar-row');
+  row.innerHTML=AVATARS.map(a=>
+    `<div class="avatar-btn" data-id="${a.id}" onclick="selectAvatar('${a.id}')">${a.emoji}</div>`
+  ).join('');
+}
+
+function selectAvatar(id){
+  currentAvatar=AVATARS.find(a=>a.id===id);
+  localStorage.setItem('kq_avatar',id);
+  document.querySelectorAll('.avatar-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.id===id);
+  });
+}
+
+function loadAvatar(){
+  const saved=localStorage.getItem('kq_avatar');
+  if(saved&&AVATARS.find(a=>a.id===saved)){selectAvatar(saved)}
+  else{selectAvatar(AVATARS[0].id)}
+}
+
+// ===== SCREENS =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='home'){updateChampion()}
+  if(id==='leaderboard'){renderLeaderboard(currentLbTab)}
+}
+
+// ===== CHAMPION =====
+function updateChampion(){
+  const banner=document.getElementById('champion-banner');
+  const today=getTodayKey();
+  const scores=getScores().filter(s=>s.date===today);
+  if(scores.length===0){banner.style.display='none';return}
+  scores.sort((a,b)=>b.correct-a.correct);
+  const champ=scores[0];
+  const av=AVATARS.find(a=>a.id===champ.avatar);
+  banner.textContent=`${av?av.emoji:''} ${av?av.name:'???'} is today's Quiz Champion! (${champ.correct}/10)`;
+  banner.style.display='block';
+}
+
+// ===== QUESTION GENERATION =====
+function seededShuffle(arr,rng){
+  const a=[...arr];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(rng()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function generateRound(seed){
+  const rng=mulberry32(seed);
+  // Shuffle all questions and pick 10
+  const shuffled=seededShuffle(QUESTIONS,rng);
+  const picked=shuffled.slice(0,10);
+
+  // For each question, shuffle the answer order (preserving correct answer tracking)
+  return picked.map(orig=>{
+    const answers=orig.a.map((text,i)=>({text,isCorrect:i===orig.c}));
+    // Shuffle answers using seeded RNG
+    for(let i=answers.length-1;i>0;i--){
+      const j=Math.floor(rng()*(i+1));
+      [answers[i],answers[j]]=[answers[j],answers[i]];
+    }
+    const correctIdx=answers.findIndex(a=>a.isCorrect);
+    return{
+      cat:orig.cat,
+      q:orig.q,
+      a:answers.map(a=>a.text),
+      c:correctIdx
+    };
+  });
+}
+
+// ===== GAME =====
+function startGame(mode){
+  if(!currentAvatar)selectAvatar(AVATARS[0].id);
+  lastMode=mode;
+
+  let seed;
+  if(mode==='daily'){seed=hashStr('quiz'+getTodayKey())}
+  else{seed=hashStr(Date.now().toString()+Math.random().toString())}
+
+  gameQuestions=generateRound(seed);
+  currentQ=0;
+  score=0;
+  answered=false;
+  roundResults=[];
+
+  document.getElementById('game-avatar').textContent=currentAvatar.emoji;
+  showScreen('game');
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const q=gameQuestions[currentQ];
+  document.getElementById('question-counter').textContent=`${currentQ+1}/10`;
+  document.getElementById('score-display').textContent=`${score}/${currentQ}`;
+
+  // Category badge
+  const badge=document.getElementById('category-badge');
+  badge.textContent=q.cat;
+  badge.className='category-badge '+(CAT_CLASS[q.cat]||'cat-fun');
+
+  // Question text
+  document.getElementById('question-text').textContent=q.q;
+
+  // Answer buttons
+  const area=document.getElementById('answers-area');
+  area.innerHTML=q.a.map((text,i)=>
+    `<button class="answer-btn" data-idx="${i}" onclick="answerQuestion(${i})">${text}</button>`
+  ).join('');
+
+  // Progress dots
+  renderDots();
+  answered=false;
+}
+
+function renderDots(){
+  const dots=document.getElementById('progress-dots');
+  let html='';
+  for(let i=0;i<10;i++){
+    let cls='dot';
+    if(i===currentQ)cls+=' current';
+    else if(i<roundResults.length){
+      cls+=roundResults[i]?' answered-correct':' answered-wrong';
+    }
+    html+=`<div class="${cls}"></div>`;
+  }
+  dots.innerHTML=html;
+}
+
+function answerQuestion(idx){
+  if(answered)return;
+  answered=true;
+
+  const q=gameQuestions[currentQ];
+  const isCorrect=idx===q.c;
+  const btns=document.querySelectorAll('.answer-btn');
+
+  // Disable all buttons
+  btns.forEach(b=>b.classList.add('disabled'));
+
+  if(isCorrect){
+    score++;
+    btns[idx].classList.add('correct');
+    btns[idx].innerHTML+=`<span class="check-mark"></span>`;
+  }else{
+    btns[idx].classList.add('wrong');
+    btns[idx].innerHTML+=`<span class="x-mark"></span>`;
+    btns[q.c].classList.add('reveal');
+    btns[q.c].innerHTML+=`<span class="check-mark"></span>`;
+  }
+
+  roundResults.push(isCorrect);
+  document.getElementById('score-display').textContent=`${score}/${currentQ+1}`;
+  renderDots();
+
+  // Auto-advance
+  setTimeout(()=>{
+    currentQ++;
+    if(currentQ<10){
+      renderQuestion();
+    }else{
+      endGame();
+    }
+  },1500);
+}
+
+function endGame(){
+  saveScore();
+  showResults();
+}
+
+// ===== RESULTS =====
+function showResults(){
+  // Title
+  const titles=['Keep trying!','Not bad!','Good job!','Great work!','Excellent!','Perfect!'];
+  let titleIdx=0;
+  if(score<=3)titleIdx=0;
+  else if(score<=5)titleIdx=1;
+  else if(score<=7)titleIdx=2;
+  else if(score<=8)titleIdx=3;
+  else if(score===9)titleIdx=4;
+  else titleIdx=5;
+  document.getElementById('results-title').textContent=titles[titleIdx];
+
+  document.getElementById('results-score').textContent=`${score}/10`;
+  document.getElementById('results-sub').textContent='correct answers';
+
+  // Stars
+  let stars=1;
+  if(score>=9)stars=3;
+  else if(score>=6)stars=2;
+  document.getElementById('results-stars').textContent=
+    '\u{2B50}'.repeat(stars)+'\u{2606}'.repeat(3-stars);
+
+  // Personal best
+  const allScores=getScores().filter(s=>s.avatar===currentAvatar.id);
+  const prevBest=allScores.length>0?Math.max(...allScores.slice(0,-1).map(s=>s.correct)):0;
+  document.getElementById('new-record').style.display=
+    (score>prevBest&&score>0)?'block':'none';
+
+  // Review list
+  const review=document.getElementById('results-review');
+  review.innerHTML=gameQuestions.map((q,i)=>{
+    const correct=roundResults[i];
+    return`<div class="review-item">
+      <div class="review-icon">${correct?'\u{2705}':'\u{274C}'}</div>
+      <div>
+        <div class="review-text">${q.q}</div>
+        ${!correct?`<div class="review-correct">Answer: ${q.a[q.c]}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  showScreen('results');
+}
+
+// ===== STORAGE =====
+function getTodayKey(){return new Date().toISOString().slice(0,10)}
+
+function getScores(){
+  try{return JSON.parse(localStorage.getItem('kq_scores')||'[]')}
+  catch(e){return[]}
+}
+
+function saveScore(){
+  const scores=getScores();
+  scores.push({
+    avatar:currentAvatar.id,
+    correct:score,
+    date:getTodayKey(),
+    mode:lastMode,
+    ts:Date.now()
+  });
+  if(scores.length>500)scores.splice(0,scores.length-500);
+  try{localStorage.setItem('kq_scores',JSON.stringify(scores))}catch(e){}
+}
+
+// ===== LEADERBOARD =====
+function switchLbTab(tab,el){
+  currentLbTab=tab;
+  document.querySelectorAll('.lb-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  renderLeaderboard(tab);
+}
+
+function renderLeaderboard(tab){
+  const scores=getScores();
+  let filtered;
+  if(tab==='today'){filtered=scores.filter(s=>s.date===getTodayKey())}
+  else{filtered=scores}
+
+  // Best score per avatar
+  const best={};
+  filtered.forEach(s=>{
+    if(!best[s.avatar]||s.correct>best[s.avatar].correct){
+      best[s.avatar]=s;
+    }
+  });
+
+  const sorted=Object.values(best).sort((a,b)=>b.correct-a.correct);
+  const list=document.getElementById('lb-list');
+
+  if(sorted.length===0){
+    list.innerHTML='<div class="lb-empty">No scores yet. Go play!</div>';
+    return;
+  }
+
+  list.innerHTML=sorted.map((s,i)=>{
+    const av=AVATARS.find(a=>a.id===s.avatar);
+    const rankText=i===0?'\u{1F451}':i===1?'\u{1F948}':i===2?'\u{1F949}':(i+1);
+    return`<div class="lb-entry">
+      <div class="lb-rank">${rankText}</div>
+      <div class="lb-avatar">${av?av.emoji:'?'}</div>
+      <div style="font-weight:600">${av?av.name:'???'}</div>
+      <div class="lb-score">${s.correct}/10</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== PREVENT ZOOM =====
+document.addEventListener('dblclick',e=>e.preventDefault());
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>

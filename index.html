@@ -73,6 +73,14 @@ color:#fff;font-size:0.6em;font-weight:700;padding:3px 8px;border-radius:8px;let
 .card-tictactoe .game-icon{background:rgba(255,255,255,0.2)}
 .card-tictactoe .party-tag{position:absolute;top:8px;right:10px;background:rgba(255,255,255,0.25);
 color:#fff;font-size:0.6em;font-weight:700;padding:3px 8px;border-radius:8px;letter-spacing:0.5px}
+
+.card-2048{background:linear-gradient(135deg,#bbada0,#a89484)}
+.card-2048 .game-card-inner{color:#fff}
+.card-2048 .game-icon{background:rgba(255,255,255,0.2);font-weight:900}
+
+.card-trivia{background:linear-gradient(135deg,#f39c12,#e67e22)}
+.card-trivia .game-card-inner{color:#fff}
+.card-trivia .game-icon{background:rgba(255,255,255,0.2)}
 </style>
 </head>
 <body>
@@ -135,6 +143,17 @@ color:#fff;font-size:0.6em;font-weight:700;padding:3px 8px;border-radius:8px;let
         <div class="game-arrow">&#8250;</div>
       </div>
     </a>
+    <a href="2048.html" class="game-card card-2048">
+      <div class="game-card-inner">
+        <div class="game-icon">2048</div>
+        <div class="game-info">
+          <div class="game-name">2048</div>
+          <div class="game-desc">Swipe to merge tiles. No timer -- play between snack runs.</div>
+        </div>
+        <div class="game-arrow">&#8250;</div>
+      </div>
+    </a>
+
     <a href="tictactoe.html" class="game-card card-tictactoe">
       <div class="party-tag">2 PLAYER</div>
       <div class="game-card-inner">
@@ -142,6 +161,17 @@ color:#fff;font-size:0.6em;font-weight:700;padding:3px 8px;border-radius:8px;let
         <div class="game-info">
           <div class="game-name">Tic-Tac-Toe</div>
           <div class="game-desc">Two players, pass the fridge. Head-to-head win tracking.</div>
+        </div>
+        <div class="game-arrow">&#8250;</div>
+      </div>
+    </a>
+
+    <a href="trivia.html" class="game-card card-trivia">
+      <div class="game-card-inner">
+        <div class="game-icon">&#x2753;</div>
+        <div class="game-info">
+          <div class="game-name">Kitchen Quiz</div>
+          <div class="game-desc">10 trivia questions. Daily challenge + free play. How smart are you?</div>
         </div>
         <div class="game-arrow">&#8250;</div>
       </div>
