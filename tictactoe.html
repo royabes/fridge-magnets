@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Tic-Tac-Toe</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(145deg,#e8e8e8 0%,#d0d0d0 50%,#c8c8c8 100%);display:flex;justify-content:center;align-items:center}
+#app{width:100%;max-width:420px;height:100vh;max-height:800px;position:relative;overflow:hidden}
+#app::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+background:repeating-linear-gradient(90deg,transparent,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 4px);
+pointer-events:none;z-index:0}
+
+.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;padding:16px;z-index:1}
+.screen.active{display:flex}
+
+.title{font-size:2.4em;font-weight:900;text-align:center;margin-top:6vh;margin-bottom:8px;
+background:linear-gradient(135deg,#e74c3c,#e67e22,#f1c40f,#2ecc71,#3498db,#9b59b6);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+.subtitle{color:#666;font-size:0.95em;margin-bottom:20px;text-align:center}
+
+.menu-btn{width:85%;max-width:300px;padding:16px;border:none;border-radius:14px;font-size:1.15em;
+font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:3px 4px 8px rgba(0,0,0,0.2);
+transition:transform 0.1s}
+.menu-btn:active{transform:scale(0.97)}
+.btn-play{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+.btn-scores{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff}
+.btn-how{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff}
+.btn-home{background:linear-gradient(135deg,#95a5a6,#7f8c8d);color:#fff}
+.btn-action{background:linear-gradient(135deg,#3498db,#2980b9);color:#fff}
+
+/* PLAYER SELECT */
+.pick-section{width:90%;margin-bottom:12px}
+.pick-label{font-size:0.85em;color:#888;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.pick-marker{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;
+justify-content:center;font-weight:900;font-size:0.9em;color:#fff}
+.marker-x{background:linear-gradient(135deg,#e74c3c,#c0392b)}
+.marker-o{background:linear-gradient(135deg,#3498db,#2980b9)}
+.avatar-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.avatar-btn{width:52px;height:52px;border-radius:14px;border:3px solid #ddd;background:#fff;
+font-size:1.6em;display:flex;align-items:center;justify-content:center;cursor:pointer;
+transition:transform 0.15s,border-color 0.15s;box-shadow:2px 3px 6px rgba(0,0,0,0.15)}
+.avatar-btn.selected-x{border-color:#e74c3c;transform:scale(1.12);box-shadow:2px 3px 12px rgba(231,76,60,0.4)}
+.avatar-btn.selected-o{border-color:#3498db;transform:scale(1.12);box-shadow:2px 3px 12px rgba(52,152,219,0.4)}
+.avatar-btn.taken{opacity:0.3;pointer-events:none}
+.avatar-btn:active{transform:scale(0.95)}
+
+/* GAME BOARD */
+.game-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:8px 12px;margin-bottom:4px}
+.player-indicator{display:flex;align-items:center;gap:8px;padding:6px 14px;border-radius:12px;font-weight:700;font-size:0.95em}
+.player-indicator .pi-avatar{font-size:1.3em}
+.player-indicator .pi-marker{font-weight:900;font-size:1.1em}
+.pi-active{background:#fff;box-shadow:2px 3px 8px rgba(0,0,0,0.15)}
+.pi-waiting{opacity:0.4}
+
+.turn-banner{font-size:1.1em;font-weight:800;color:#2c3e50;margin-bottom:8px;height:32px;
+display:flex;align-items:center;justify-content:center;gap:6px}
+.turn-banner .turn-avatar{font-size:1.2em}
+
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+width:min(82vw,320px);height:min(82vw,320px);margin:0 auto}
+
+.cell{border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;
+cursor:pointer;box-shadow:3px 4px 8px rgba(0,0,0,0.12);transition:transform 0.1s;position:relative}
+.cell:active{transform:scale(0.95)}
+.cell.taken{cursor:default}
+.cell.taken:active{transform:none}
+
+.cell-mark{font-size:3em;font-weight:900;line-height:1;opacity:0;transform:scale(0.3);
+transition:opacity 0.2s,transform 0.25s}
+.cell-mark.show{opacity:1;transform:scale(1)}
+.cell-mark.x{color:#e74c3c}
+.cell-mark.o{color:#3498db}
+
+.cell.win-cell{animation:winPulse 0.6s ease infinite alternate}
+@keyframes winPulse{from{box-shadow:3px 4px 8px rgba(0,0,0,0.12)}to{box-shadow:0 0 20px rgba(46,204,113,0.5)}}
+
+.win-line{position:absolute;background:linear-gradient(90deg,#2ecc71,#27ae60);border-radius:6px;
+z-index:5;opacity:0;transition:opacity 0.3s}
+.win-line.show{opacity:0.8}
+
+/* RESULT OVERLAY */
+.result-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);
+display:none;flex-direction:column;align-items:center;justify-content:center;z-index:20;padding:16px}
+.result-overlay.active{display:flex}
+.result-emoji{font-size:4em;margin-bottom:8px}
+.result-text{font-size:2em;font-weight:900;color:#fff;margin-bottom:4px;text-align:center}
+.result-detail{font-size:1.1em;color:#ccc;margin-bottom:24px;text-align:center}
+
+/* SCOREBOARD */
+.record-card{width:90%;background:#fff;border-radius:16px;padding:16px;margin-bottom:10px;
+box-shadow:2px 3px 8px rgba(0,0,0,0.12)}
+.record-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.record-header .rh-emoji{font-size:1.6em}
+.record-header .rh-vs{font-size:0.85em;color:#888;font-weight:600}
+.record-stats{display:flex;justify-content:space-around;text-align:center}
+.stat{display:flex;flex-direction:column;align-items:center}
+.stat-num{font-size:1.8em;font-weight:900}
+.stat-num.x-color{color:#e74c3c}
+.stat-num.o-color{color:#3498db}
+.stat-num.draw-color{color:#888}
+.stat-label{font-size:0.7em;color:#999;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+
+.sb-empty{text-align:center;color:#999;padding:40px;font-size:1.1em}
+
+.back-btn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.1);border:none;
+border-radius:50%;width:40px;height:40px;font-size:1.2em;cursor:pointer;z-index:10;
+display:flex;align-items:center;justify-content:center}
+
+.how-content{width:90%;max-height:65vh;overflow-y:auto;padding:16px;margin-top:4vh}
+.how-content h2{font-size:1.3em;margin-bottom:10px;color:#2c3e50}
+.how-content p{margin-bottom:12px;line-height:1.5;color:#555;font-size:0.93em}
+
+.brand{position:fixed;bottom:8px;right:12px;font-size:0.7em;color:rgba(0,0,0,0.25);
+font-weight:600;letter-spacing:0.5px;z-index:999;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="brand">royabes.com</div>
+<div id="app">
+
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="title">Tic-Tac-Toe</div>
+    <div class="subtitle">Pick your players. Pass the fridge.</div>
+
+    <div class="pick-section">
+      <div class="pick-label"><div class="pick-marker marker-x">X</div> Player X goes first</div>
+      <div class="avatar-row" id="pick-x"></div>
+    </div>
+
+    <div class="pick-section">
+      <div class="pick-label"><div class="pick-marker marker-o">O</div> Player O</div>
+      <div class="avatar-row" id="pick-o"></div>
+    </div>
+
+    <button class="menu-btn btn-play" onclick="startGame()" style="margin-top:8px">Play!</button>
+    <button class="menu-btn btn-scores" onclick="showScreen('scoreboard')">Win Record</button>
+    <button class="menu-btn btn-how" onclick="showScreen('howto')">How to Play</button>
+    <a href="index.html" class="menu-btn btn-home" style="text-align:center;text-decoration:none;display:block">All Games</a>
+  </div>
+
+  <!-- GAME -->
+  <div id="game" class="screen">
+    <div class="game-header">
+      <div class="player-indicator pi-active" id="pi-x">
+        <span class="pi-avatar" id="pi-x-avatar"></span>
+        <span class="pi-marker" style="color:#e74c3c">X</span>
+      </div>
+      <div class="player-indicator pi-waiting" id="pi-o">
+        <span class="pi-marker" style="color:#3498db">O</span>
+        <span class="pi-avatar" id="pi-o-avatar"></span>
+      </div>
+    </div>
+
+    <div class="turn-banner" id="turn-banner">
+      <span class="turn-avatar" id="turn-avatar"></span>
+      <span id="turn-text">Your turn!</span>
+    </div>
+
+    <div class="board" id="board"></div>
+
+    <!-- Result overlay -->
+    <div class="result-overlay" id="result-overlay">
+      <div class="result-emoji" id="result-emoji"></div>
+      <div class="result-text" id="result-text"></div>
+      <div class="result-detail" id="result-detail"></div>
+      <button class="menu-btn btn-play" onclick="rematch()" style="width:260px">Rematch!</button>
+      <button class="menu-btn btn-action" onclick="showScreen('home')" style="width:260px;font-size:0.95em">Change Players</button>
+    </div>
+  </div>
+
+  <!-- SCOREBOARD -->
+  <div id="scoreboard" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="title" style="font-size:1.6em;margin-top:6vh">Win Record</div>
+    <div class="subtitle">Head-to-head results</div>
+    <div id="sb-list" style="width:90%;flex:1;overflow-y:auto"></div>
+    <button class="menu-btn btn-play" onclick="showScreen('home')" style="margin-top:12px">Play</button>
+    <button class="menu-btn btn-home" onclick="resetAllRecords()" style="margin-top:4px;font-size:0.9em;width:85%;max-width:300px">Reset All Records</button>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div id="howto" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="how-content">
+      <h2>How to Play</h2>
+      <p>Two players take turns placing their mark (X or O) on a 3x3 grid. Get three in a row -- horizontally, vertically, or diagonally -- to win!</p>
+      <p>Player <strong style="color:#e74c3c">X</strong> always goes first. After each game, you can rematch or switch players.</p>
+      <h2 style="margin-top:16px">Win Record</h2>
+      <p>Every matchup is tracked. The fridge remembers who beats who! Check the Win Record to see head-to-head stats between family members.</p>
+      <h2 style="margin-top:16px">Strategy Tips</h2>
+      <p>Take the center if you can. If your opponent takes the center, grab a corner. Block your opponent's two-in-a-row before building your own.</p>
+    </div>
+    <button class="menu-btn btn-play" onclick="showScreen('home')" style="margin-top:12px">Got it!</button>
+  </div>
+
+</div>
+
+<script>
+const AVATARS=[
+  {id:'bear',emoji:'\u{1F43B}',name:'Bear'},
+  {id:'fox',emoji:'\u{1F98A}',name:'Fox'},
+  {id:'frog',emoji:'\u{1F438}',name:'Frog'},
+  {id:'owl',emoji:'\u{1F989}',name:'Owl'},
+  {id:'cat',emoji:'\u{1F431}',name:'Cat'},
+  {id:'dog',emoji:'\u{1F436}',name:'Dog'},
+  {id:'penguin',emoji:'\u{1F427}',name:'Penguin'},
+  {id:'unicorn',emoji:'\u{1F984}',name:'Unicorn'}
+];
+
+const WIN_LINES=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+// State
+let playerX=null;
+let playerO=null;
+let board=[];
+let currentTurn='x';
+let gameOver=false;
+let records={};
+
+// ===== INIT =====
+function init(){
+  loadRecords();
+  renderPickers();
+  // Default selections
+  selectPlayer('x',AVATARS[0].id);
+  selectPlayer('o',AVATARS[1].id);
+}
+
+function renderPickers(){
+  renderPickerRow('pick-x','x');
+  renderPickerRow('pick-o','o');
+}
+
+function renderPickerRow(containerId,side){
+  const container=document.getElementById(containerId);
+  container.innerHTML=AVATARS.map(a=>{
+    return`<div class="avatar-btn" data-id="${a.id}" data-side="${side}" onclick="selectPlayer('${side}','${a.id}')">${a.emoji}</div>`;
+  }).join('');
+  updatePickerStates();
+}
+
+function selectPlayer(side,id){
+  if(side==='x'){
+    playerX=AVATARS.find(a=>a.id===id);
+    if(playerO&&playerO.id===id){playerO=null}
+  }else{
+    playerO=AVATARS.find(a=>a.id===id);
+    if(playerX&&playerX.id===id){playerX=null}
+  }
+  updatePickerStates();
+}
+
+function updatePickerStates(){
+  document.querySelectorAll('#pick-x .avatar-btn').forEach(btn=>{
+    const id=btn.dataset.id;
+    btn.classList.remove('selected-x','selected-o','taken');
+    if(playerX&&playerX.id===id)btn.classList.add('selected-x');
+    else if(playerO&&playerO.id===id)btn.classList.add('taken');
+  });
+  document.querySelectorAll('#pick-o .avatar-btn').forEach(btn=>{
+    const id=btn.dataset.id;
+    btn.classList.remove('selected-x','selected-o','taken');
+    if(playerO&&playerO.id===id)btn.classList.add('selected-o');
+    else if(playerX&&playerX.id===id)btn.classList.add('taken');
+  });
+}
+
+// ===== SCREENS =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.getElementById('result-overlay').classList.remove('active');
+  if(id==='scoreboard')renderScoreboard();
+  if(id==='home')renderPickers();
+}
+
+// ===== GAME =====
+function startGame(){
+  if(!playerX)selectPlayer('x',AVATARS[0].id);
+  if(!playerO){
+    // Pick first available avatar not taken by X
+    const avail=AVATARS.find(a=>a.id!==playerX.id);
+    selectPlayer('o',avail.id);
+  }
+
+  board=Array(9).fill(null);
+  currentTurn='x';
+  gameOver=false;
+
+  document.getElementById('pi-x-avatar').textContent=playerX.emoji;
+  document.getElementById('pi-o-avatar').textContent=playerO.emoji;
+  document.getElementById('result-overlay').classList.remove('active');
+
+  renderBoard();
+  updateTurnDisplay();
+  showScreen('game');
+}
+
+function renderBoard(){
+  const container=document.getElementById('board');
+  container.innerHTML=Array(9).fill(0).map((_,i)=>
+    `<div class="cell" data-idx="${i}" onclick="makeMove(${i})">
+      <div class="cell-mark" id="mark-${i}"></div>
+    </div>`
+  ).join('');
+}
+
+function updateTurnDisplay(){
+  const current=currentTurn==='x'?playerX:playerO;
+  document.getElementById('turn-avatar').textContent=current.emoji;
+  document.getElementById('turn-text').textContent=`${current.name}'s turn!`;
+
+  document.getElementById('pi-x').classList.toggle('pi-active',currentTurn==='x');
+  document.getElementById('pi-x').classList.toggle('pi-waiting',currentTurn!=='x');
+  document.getElementById('pi-o').classList.toggle('pi-active',currentTurn==='o');
+  document.getElementById('pi-o').classList.toggle('pi-waiting',currentTurn!=='o');
+}
+
+function makeMove(idx){
+  if(gameOver||board[idx])return;
+
+  board[idx]=currentTurn;
+  const mark=document.getElementById(`mark-${idx}`);
+  mark.textContent=currentTurn==='x'?'X':'O';
+  mark.className=`cell-mark ${currentTurn} show`;
+  document.querySelectorAll('.cell')[idx].classList.add('taken');
+
+  // Check win
+  const winLine=checkWin(currentTurn);
+  if(winLine!==null){
+    gameOver=true;
+    highlightWin(winLine);
+    const winner=currentTurn==='x'?playerX:playerO;
+    const loser=currentTurn==='x'?playerO:playerX;
+    setTimeout(()=>showResult('win',winner,loser,currentTurn),600);
+    recordResult(playerX.id,playerO.id,currentTurn==='x'?'x':'o');
+    return;
+  }
+
+  // Check draw
+  if(board.every(c=>c!==null)){
+    gameOver=true;
+    setTimeout(()=>showResult('draw'),500);
+    recordResult(playerX.id,playerO.id,'draw');
+    return;
+  }
+
+  // Switch turn
+  currentTurn=currentTurn==='x'?'o':'x';
+  updateTurnDisplay();
+}
+
+function checkWin(player){
+  for(let i=0;i<WIN_LINES.length;i++){
+    const[a,b,c]=WIN_LINES[i];
+    if(board[a]===player&&board[b]===player&&board[c]===player){
+      return WIN_LINES[i];
+    }
+  }
+  return null;
+}
+
+function highlightWin(line){
+  const cells=document.querySelectorAll('.cell');
+  line.forEach(i=>cells[i].classList.add('win-cell'));
+}
+
+function showResult(type,winner,loser,side){
+  const overlay=document.getElementById('result-overlay');
+  const emoji=document.getElementById('result-emoji');
+  const text=document.getElementById('result-text');
+  const detail=document.getElementById('result-detail');
+
+  if(type==='win'){
+    emoji.textContent=winner.emoji;
+    text.textContent=`${winner.name} wins!`;
+    detail.textContent=`${winner.name} (${side.toUpperCase()}) beat ${loser.name}`;
+  }else{
+    emoji.textContent='\u{1F91D}';
+    text.textContent="It's a draw!";
+    detail.textContent=`${playerX.name} vs ${playerO.name}`;
+  }
+
+  overlay.classList.add('active');
+}
+
+function rematch(){
+  // Swap who goes first (loser/O becomes X)
+  const tempX=playerX;
+  const tempO=playerO;
+  playerX=tempO;
+  playerO=tempX;
+  startGame();
+}
+
+// ===== RECORDS =====
+function getRecordKey(id1,id2){
+  return[id1,id2].sort().join('-');
+}
+
+function loadRecords(){
+  try{records=JSON.parse(localStorage.getItem('ttt_records')||'{}')}catch(e){records={}}
+}
+
+function saveRecords(){
+  try{localStorage.setItem('ttt_records',JSON.stringify(records))}catch(e){}
+}
+
+function recordResult(xId,oId,result){
+  const key=getRecordKey(xId,oId);
+  if(!records[key]){
+    records[key]={players:[xId,oId],wins:{},draws:0};
+    records[key].wins[xId]=0;
+    records[key].wins[oId]=0;
+  }
+  if(result==='draw'){
+    records[key].draws++;
+  }else{
+    const winnerId=result==='x'?xId:oId;
+    records[key].wins[winnerId]=(records[key].wins[winnerId]||0)+1;
+  }
+  saveRecords();
+}
+
+function resetAllRecords(){
+  if(confirm('Reset all win records?')){
+    records={};
+    saveRecords();
+    renderScoreboard();
+  }
+}
+
+function renderScoreboard(){
+  const list=document.getElementById('sb-list');
+  const keys=Object.keys(records);
+
+  if(keys.length===0){
+    list.innerHTML='<div class="sb-empty">No games played yet!</div>';
+    return;
+  }
+
+  // Sort by total games played (most first)
+  keys.sort((a,b)=>{
+    const ra=records[a],rb=records[b];
+    const totalA=Object.values(ra.wins).reduce((s,v)=>s+v,0)+ra.draws;
+    const totalB=Object.values(rb.wins).reduce((s,v)=>s+v,0)+rb.draws;
+    return totalB-totalA;
+  });
+
+  list.innerHTML=keys.map(key=>{
+    const rec=records[key];
+    const[id1,id2]=rec.players;
+    const a1=AVATARS.find(a=>a.id===id1);
+    const a2=AVATARS.find(a=>a.id===id2);
+    const w1=rec.wins[id1]||0;
+    const w2=rec.wins[id2]||0;
+    const d=rec.draws||0;
+
+    return`<div class="record-card">
+      <div class="record-header">
+        <span class="rh-emoji">${a1?a1.emoji:'?'}</span>
+        <span class="rh-vs">vs</span>
+        <span class="rh-emoji">${a2?a2.emoji:'?'}</span>
+      </div>
+      <div class="record-stats">
+        <div class="stat">
+          <div class="stat-num x-color">${w1}</div>
+          <div class="stat-label">${a1?a1.name:'?'} wins</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num draw-color">${d}</div>
+          <div class="stat-label">Draws</div>
+        </div>
+        <div class="stat">
+          <div class="stat-num o-color">${w2}</div>
+          <div class="stat-label">${a2?a2.name:'?'} wins</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ===== PREVENT ZOOM =====
+document.addEventListener('dblclick',e=>e.preventDefault());
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
