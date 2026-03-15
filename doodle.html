@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Doodle Guess</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:linear-gradient(145deg,#e8e8e8 0%,#d0d0d0 50%,#c8c8c8 100%);display:flex;justify-content:center;align-items:center}
+#app{width:100%;max-width:420px;height:100vh;max-height:800px;position:relative;overflow:hidden}
+#app::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+background:repeating-linear-gradient(90deg,transparent,transparent 2px,rgba(255,255,255,0.03) 2px,rgba(255,255,255,0.03) 4px);
+pointer-events:none;z-index:0}
+
+.screen{position:absolute;top:0;left:0;width:100%;height:100%;display:none;flex-direction:column;align-items:center;padding:16px;z-index:1}
+.screen.active{display:flex}
+
+.title{font-size:2.4em;font-weight:900;text-align:center;margin-top:8vh;margin-bottom:8px;
+background:linear-gradient(135deg,#e74c3c,#e67e22,#f1c40f,#2ecc71,#3498db,#9b59b6);
+-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+.subtitle{color:#666;font-size:0.95em;margin-bottom:20px;text-align:center}
+
+.menu-btn{width:85%;max-width:300px;padding:16px;border:none;border-radius:14px;font-size:1.15em;
+font-weight:700;cursor:pointer;margin-bottom:10px;box-shadow:3px 4px 8px rgba(0,0,0,0.2);
+transition:transform 0.1s}
+.menu-btn:active{transform:scale(0.97)}
+.btn-play{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+.btn-scores{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff}
+.btn-how{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff}
+.btn-home{background:linear-gradient(135deg,#95a5a6,#7f8c8d);color:#fff}
+.btn-action{background:linear-gradient(135deg,#3498db,#2980b9);color:#fff}
+.btn-correct{background:linear-gradient(135deg,#2ecc71,#27ae60);color:#fff}
+.btn-skip{background:linear-gradient(135deg,#e67e22,#d35400);color:#fff}
+.btn-clear{background:#fff;color:#666;border:2px solid #ddd}
+
+/* PLAYER SELECT */
+.player-section{margin-bottom:16px;width:90%;text-align:center}
+.player-label{font-size:0.85em;color:#888;margin-bottom:6px;font-weight:600}
+.avatar-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.avatar-btn{width:52px;height:52px;border-radius:14px;border:3px solid #ddd;background:#fff;
+font-size:1.6em;display:flex;align-items:center;justify-content:center;cursor:pointer;
+transition:transform 0.15s,border-color 0.15s;box-shadow:2px 3px 6px rgba(0,0,0,0.15);position:relative}
+.avatar-btn.selected{border-color:#e74c3c;transform:scale(1.12);box-shadow:2px 3px 12px rgba(231,76,60,0.4)}
+.avatar-btn:active{transform:scale(0.95)}
+.avatar-btn .score-badge{position:absolute;top:-6px;right:-6px;background:#e74c3c;color:#fff;
+font-size:0.4em;font-weight:800;width:20px;height:20px;border-radius:50%;display:flex;
+align-items:center;justify-content:center;box-shadow:1px 1px 3px rgba(0,0,0,0.3)}
+
+/* WORD REVEAL */
+#peek-screen{background:rgba(0,0,0,0.92)}
+#peek-screen .screen-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%}
+.peek-label{color:#aaa;font-size:1em;margin-bottom:8px}
+.peek-word{color:#fff;font-size:2.8em;font-weight:900;margin-bottom:6px;text-align:center;letter-spacing:1px}
+.peek-category{color:#888;font-size:0.9em;margin-bottom:32px;text-transform:uppercase;letter-spacing:2px}
+.peek-hint{color:#555;font-size:0.8em;margin-top:24px}
+
+/* DRAWING SCREEN */
+#draw-screen{padding:0}
+.draw-header{width:100%;display:flex;justify-content:space-between;align-items:center;
+padding:8px 12px;background:rgba(255,255,255,0.95);z-index:10;position:relative;
+box-shadow:0 2px 6px rgba(0,0,0,0.1)}
+.draw-timer{font-size:1.6em;font-weight:900;color:#2c3e50}
+.draw-timer.urgent{color:#e74c3c;animation:pulse 0.5s infinite alternate}
+.draw-round{font-size:0.85em;font-weight:700;color:#888}
+.draw-avatar{font-size:1.4em}
+
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.1)}}
+
+.canvas-container{flex:1;width:100%;position:relative;background:#fff;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+
+.draw-toolbar{width:100%;display:flex;gap:6px;padding:6px 10px;background:rgba(255,255,255,0.95);
+z-index:10;position:relative;box-shadow:0 -2px 6px rgba(0,0,0,0.1);align-items:center;flex-wrap:wrap}
+
+.color-btn{width:36px;height:36px;border-radius:50%;border:3px solid #fff;cursor:pointer;
+box-shadow:1px 2px 4px rgba(0,0,0,0.2);transition:transform 0.1s}
+.color-btn.active{border-color:#333;transform:scale(1.15)}
+.color-btn:active{transform:scale(0.9)}
+
+.size-btn{width:36px;height:36px;border-radius:50%;border:2px solid #ddd;background:#fff;
+cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform 0.1s}
+.size-btn.active{border-color:#333;background:#f0f0f0}
+.size-btn .dot{border-radius:50%;background:#333}
+
+.tool-spacer{flex:1}
+
+.draw-actions{width:100%;display:flex;gap:6px;padding:6px 10px;background:rgba(255,255,255,0.95);
+z-index:10;position:relative}
+.draw-actions .menu-btn{flex:1;padding:12px;margin:0;font-size:0.95em;width:auto}
+
+/* GUESS SCREEN */
+#guess-screen{background:rgba(0,0,0,0.88)}
+.guess-prompt{color:#fff;font-size:1.3em;font-weight:700;margin-top:10vh;margin-bottom:8px;text-align:center}
+.guess-word{color:#2ecc71;font-size:1.8em;font-weight:900;margin-bottom:24px;text-align:center}
+.guess-label{color:#aaa;font-size:0.9em;margin-bottom:12px}
+.guess-avatars{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-bottom:24px}
+.guess-avatar{width:64px;height:64px;border-radius:18px;border:3px solid rgba(255,255,255,0.2);
+background:rgba(255,255,255,0.1);font-size:2em;display:flex;align-items:center;justify-content:center;
+cursor:pointer;transition:transform 0.15s,border-color 0.15s}
+.guess-avatar:active{transform:scale(0.9)}
+.guess-avatar.flash{border-color:#2ecc71;background:rgba(46,204,113,0.2);transform:scale(1.1)}
+.guess-nobody{color:#888;font-size:0.85em;cursor:pointer;text-decoration:underline;margin-top:8px}
+
+/* SCOREBOARD */
+.sb-list{width:90%;flex:1;overflow-y:auto;margin-top:16px}
+.sb-entry{display:flex;align-items:center;padding:12px;background:#fff;border-radius:14px;
+margin-bottom:8px;box-shadow:2px 2px 6px rgba(0,0,0,0.1)}
+.sb-rank{font-size:1.3em;font-weight:900;width:36px;text-align:center;color:#666}
+.sb-avatar{font-size:1.6em;margin:0 12px}
+.sb-name{font-weight:700;flex:1}
+.sb-score{font-size:1.3em;font-weight:800;color:#2c3e50}
+.sb-detail{font-size:0.75em;color:#888;margin-left:6px}
+.sb-empty{text-align:center;color:#999;padding:40px;font-size:1.1em}
+
+/* HOW TO PLAY */
+.how-content{width:90%;max-height:65vh;overflow-y:auto;padding:16px;margin-top:4vh}
+.how-content h2{font-size:1.3em;margin-bottom:10px;color:#2c3e50}
+.how-content p{margin-bottom:12px;line-height:1.5;color:#555;font-size:0.93em}
+.how-content ol{margin:8px 0 12px 20px;color:#555;font-size:0.93em;line-height:1.6}
+
+.back-btn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.1);border:none;
+border-radius:50%;width:40px;height:40px;font-size:1.2em;cursor:pointer;z-index:10;
+display:flex;align-items:center;justify-content:center}
+
+.brand{position:fixed;bottom:8px;right:12px;font-size:0.7em;color:rgba(0,0,0,0.25);
+font-weight:600;letter-spacing:0.5px;z-index:999;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="brand">royabes.com</div>
+<div id="app">
+
+  <!-- HOME -->
+  <div id="home" class="screen active">
+    <div class="title">Doodle Guess</div>
+    <div class="subtitle">Draw on the fridge. Family guesses.</div>
+
+    <div class="player-section">
+      <div class="player-label">Who's drawing?</div>
+      <div class="avatar-row" id="drawer-row"></div>
+    </div>
+
+    <button class="menu-btn btn-play" onclick="startRound()">Start Drawing!</button>
+    <button class="menu-btn btn-scores" onclick="showScreen('scoreboard')">Scoreboard</button>
+    <button class="menu-btn btn-how" onclick="showScreen('howto')">How to Play</button>
+    <a href="index.html" class="menu-btn btn-home" style="text-align:center;text-decoration:none;display:block">All Games</a>
+  </div>
+
+  <!-- PEEK (word reveal) -->
+  <div id="peek-screen" class="screen">
+    <div class="screen-inner">
+      <div class="peek-label">Your word is:</div>
+      <div class="peek-word" id="peek-word"></div>
+      <div class="peek-category" id="peek-category"></div>
+      <button class="menu-btn btn-action" onclick="startDrawing()" style="width:260px">I'm Ready - Start Drawing!</button>
+      <button class="menu-btn btn-skip" onclick="skipWord()" style="width:260px;font-size:0.95em">Skip Word</button>
+      <div class="peek-hint">Only YOU should see this screen!</div>
+    </div>
+  </div>
+
+  <!-- DRAWING -->
+  <div id="draw-screen" class="screen">
+    <div class="draw-header">
+      <div class="draw-avatar" id="draw-avatar"></div>
+      <div>
+        <div class="draw-timer" id="draw-timer">1:30</div>
+        <div class="draw-round" id="draw-round">Round 1</div>
+      </div>
+      <div style="width:40px"></div>
+    </div>
+    <div class="canvas-container" id="canvas-container">
+      <canvas id="canvas"></canvas>
+    </div>
+    <div class="draw-toolbar" id="toolbar">
+      <div class="color-btn active" style="background:#333" data-color="#333" onclick="setColor(this)"></div>
+      <div class="color-btn" style="background:#e74c3c" data-color="#e74c3c" onclick="setColor(this)"></div>
+      <div class="color-btn" style="background:#3498db" data-color="#3498db" onclick="setColor(this)"></div>
+      <div class="color-btn" style="background:#2ecc71" data-color="#2ecc71" onclick="setColor(this)"></div>
+      <div class="color-btn" style="background:#f39c12" data-color="#f39c12" onclick="setColor(this)"></div>
+      <div class="color-btn" style="background:#9b59b6" data-color="#9b59b6" onclick="setColor(this)"></div>
+      <div class="tool-spacer"></div>
+      <div class="size-btn active" data-size="4" onclick="setSize(this)"><div class="dot" style="width:6px;height:6px"></div></div>
+      <div class="size-btn" data-size="8" onclick="setSize(this)"><div class="dot" style="width:10px;height:10px"></div></div>
+      <div class="size-btn" data-size="16" onclick="setSize(this)"><div class="dot" style="width:16px;height:16px"></div></div>
+      <div class="color-btn" style="background:#fff;border:2px solid #ccc" data-color="eraser" onclick="setColor(this)"></div>
+    </div>
+    <div class="draw-actions">
+      <button class="menu-btn btn-clear" onclick="clearCanvas()" style="font-size:0.85em">Clear</button>
+      <button class="menu-btn btn-correct" onclick="showGuessScreen()" style="font-size:0.85em">Got It!</button>
+      <button class="menu-btn btn-skip" onclick="timeUpOrSkip()" style="font-size:0.85em">Skip</button>
+    </div>
+  </div>
+
+  <!-- GUESS (who guessed it) -->
+  <div id="guess-screen" class="screen">
+    <div class="guess-prompt">The word was:</div>
+    <div class="guess-word" id="guess-word"></div>
+    <div class="guess-label">Who guessed it?</div>
+    <div class="guess-avatars" id="guess-avatars"></div>
+    <div class="guess-nobody" onclick="nobodyGuessed()">Nobody guessed it</div>
+  </div>
+
+  <!-- SCOREBOARD -->
+  <div id="scoreboard" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="title" style="font-size:1.6em;margin-top:6vh">Scoreboard</div>
+    <div class="subtitle">This session's scores</div>
+    <div class="sb-list" id="sb-list"></div>
+    <button class="menu-btn btn-play" onclick="startRound()" style="margin-top:12px">Next Round</button>
+    <button class="menu-btn btn-action" onclick="resetScores()" style="margin-top:4px;font-size:0.9em;width:85%;max-width:300px">Reset Scores</button>
+    <button class="menu-btn btn-home" onclick="showScreen('home')" style="margin-top:4px;width:85%;max-width:300px">Home</button>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div id="howto" class="screen">
+    <button class="back-btn" onclick="showScreen('home')">&#8592;</button>
+    <div class="how-content">
+      <h2>How to Play</h2>
+      <ol>
+        <li><strong>Pick who's drawing</strong> -- tap your avatar on the home screen</li>
+        <li><strong>See your word</strong> -- only the drawer peeks! Hide the screen from guessers</li>
+        <li><strong>Draw on the fridge</strong> -- use colors, sizes, and your finger</li>
+        <li><strong>Family shouts guesses</strong> -- everyone watching tries to guess the word</li>
+        <li><strong>Tap "Got It!"</strong> when someone guesses correctly</li>
+        <li><strong>Tap who guessed it</strong> -- both drawer and guesser earn points</li>
+        <li><strong>Pass the fridge</strong> -- next person draws!</li>
+      </ol>
+      <h2 style="margin-top:16px">Scoring</h2>
+      <p><strong>Drawer:</strong> +2 points when someone guesses correctly</p>
+      <p><strong>Guesser:</strong> +3 points for guessing correctly</p>
+      <p><strong>Skip/Timeout:</strong> No points for anyone</p>
+      <h2 style="margin-top:16px">Tips</h2>
+      <p>Start with big shapes, then add details. Use different colors to make things clearer. Don't write letters or numbers -- that's cheating!</p>
+      <p>You have <strong>90 seconds</strong> per word. If it's too hard, skip it!</p>
+    </div>
+    <button class="menu-btn btn-play" onclick="showScreen('home')" style="margin-top:12px">Got it!</button>
+  </div>
+
+</div>
+
+<script>
+// ===== WORD BANK =====
+const WORDS = [
+  // Food & Kitchen (easy)
+  {word:'Pizza',cat:'Food'},{word:'Cake',cat:'Food'},{word:'Ice Cream',cat:'Food'},
+  {word:'Banana',cat:'Food'},{word:'Cookie',cat:'Food'},{word:'Hamburger',cat:'Food'},
+  {word:'Pancake',cat:'Food'},{word:'Spaghetti',cat:'Food'},{word:'Sandwich',cat:'Food'},
+  {word:'Taco',cat:'Food'},{word:'Popcorn',cat:'Food'},{word:'Donut',cat:'Food'},
+  {word:'Watermelon',cat:'Food'},{word:'Hot Dog',cat:'Food'},{word:'Cupcake',cat:'Food'},
+  {word:'French Fries',cat:'Food'},{word:'Sushi',cat:'Food'},{word:'Cereal',cat:'Food'},
+  {word:'Soup',cat:'Food'},{word:'Salad',cat:'Food'},{word:'Bread',cat:'Food'},
+  {word:'Egg',cat:'Food'},{word:'Cheese',cat:'Food'},{word:'Apple Pie',cat:'Food'},
+  // Kitchen
+  {word:'Fridge',cat:'Kitchen'},{word:'Blender',cat:'Kitchen'},{word:'Toaster',cat:'Kitchen'},
+  {word:'Oven',cat:'Kitchen'},{word:'Fork',cat:'Kitchen'},{word:'Spoon',cat:'Kitchen'},
+  {word:'Knife',cat:'Kitchen'},{word:'Plate',cat:'Kitchen'},{word:'Cup',cat:'Kitchen'},
+  {word:'Pot',cat:'Kitchen'},{word:'Pan',cat:'Kitchen'},{word:'Microwave',cat:'Kitchen'},
+  {word:'Apron',cat:'Kitchen'},{word:'Sink',cat:'Kitchen'},{word:'Kettle',cat:'Kitchen'},
+  // Animals
+  {word:'Cat',cat:'Animal'},{word:'Dog',cat:'Animal'},{word:'Fish',cat:'Animal'},
+  {word:'Bird',cat:'Animal'},{word:'Elephant',cat:'Animal'},{word:'Giraffe',cat:'Animal'},
+  {word:'Lion',cat:'Animal'},{word:'Penguin',cat:'Animal'},{word:'Butterfly',cat:'Animal'},
+  {word:'Snake',cat:'Animal'},{word:'Turtle',cat:'Animal'},{word:'Rabbit',cat:'Animal'},
+  {word:'Monkey',cat:'Animal'},{word:'Bear',cat:'Animal'},{word:'Horse',cat:'Animal'},
+  {word:'Frog',cat:'Animal'},{word:'Spider',cat:'Animal'},{word:'Shark',cat:'Animal'},
+  {word:'Dinosaur',cat:'Animal'},{word:'Unicorn',cat:'Animal'},{word:'Octopus',cat:'Animal'},
+  // Things
+  {word:'House',cat:'Thing'},{word:'Car',cat:'Thing'},{word:'Tree',cat:'Thing'},
+  {word:'Sun',cat:'Thing'},{word:'Moon',cat:'Thing'},{word:'Star',cat:'Thing'},
+  {word:'Rainbow',cat:'Thing'},{word:'Umbrella',cat:'Thing'},{word:'Bicycle',cat:'Thing'},
+  {word:'Guitar',cat:'Thing'},{word:'Book',cat:'Thing'},{word:'Clock',cat:'Thing'},
+  {word:'Key',cat:'Thing'},{word:'Hat',cat:'Thing'},{word:'Glasses',cat:'Thing'},
+  {word:'Airplane',cat:'Thing'},{word:'Rocket',cat:'Thing'},{word:'Robot',cat:'Thing'},
+  {word:'Candle',cat:'Thing'},{word:'Balloon',cat:'Thing'},{word:'Crown',cat:'Thing'},
+  {word:'Snowman',cat:'Thing'},{word:'Castle',cat:'Thing'},{word:'Treasure Chest',cat:'Thing'},
+  // Actions (harder)
+  {word:'Dancing',cat:'Action'},{word:'Swimming',cat:'Action'},{word:'Sleeping',cat:'Action'},
+  {word:'Cooking',cat:'Action'},{word:'Fishing',cat:'Action'},{word:'Reading',cat:'Action'},
+  {word:'Running',cat:'Action'},{word:'Flying',cat:'Action'},{word:'Painting',cat:'Action'},
+  {word:'Singing',cat:'Action'},{word:'Camping',cat:'Action'},{word:'Surfing',cat:'Action'},
+  // Places
+  {word:'Beach',cat:'Place'},{word:'Mountain',cat:'Place'},{word:'Hospital',cat:'Place'},
+  {word:'School',cat:'Place'},{word:'Library',cat:'Place'},{word:'Zoo',cat:'Place'},
+  {word:'Park',cat:'Place'},{word:'Island',cat:'Place'},{word:'Volcano',cat:'Place'},
+];
+
+const AVATARS=[
+  {id:'bear',emoji:'\u{1F43B}',name:'Bear'},
+  {id:'fox',emoji:'\u{1F98A}',name:'Fox'},
+  {id:'frog',emoji:'\u{1F438}',name:'Frog'},
+  {id:'owl',emoji:'\u{1F989}',name:'Owl'},
+  {id:'cat',emoji:'\u{1F431}',name:'Cat'},
+  {id:'dog',emoji:'\u{1F436}',name:'Dog'},
+  {id:'penguin',emoji:'\u{1F427}',name:'Penguin'},
+  {id:'unicorn',emoji:'\u{1F984}',name:'Unicorn'}
+];
+
+// ===== STATE =====
+let currentDrawer=null;
+let currentWord=null;
+let currentCategory=null;
+let roundNum=0;
+let drawTimer=null;
+let timeLeft=90;
+let scores={};
+let usedWords=new Set();
+let drawColor='#333';
+let drawSize=4;
+let isDrawing=false;
+let ctx=null;
+let canvas=null;
+let lastX=0,lastY=0;
+
+// ===== INIT =====
+function init(){
+  renderDrawerSelect();
+  loadScores();
+  selectDrawer(AVATARS[0].id);
+}
+
+function renderDrawerSelect(){
+  const row=document.getElementById('drawer-row');
+  row.innerHTML=AVATARS.map(a=>{
+    const s=scores[a.id]||0;
+    const badge=s>0?`<div class="score-badge">${s}</div>`:'';
+    return`<div class="avatar-btn" data-id="${a.id}" onclick="selectDrawer('${a.id}')">${a.emoji}${badge}</div>`;
+  }).join('');
+}
+
+function selectDrawer(id){
+  currentDrawer=AVATARS.find(a=>a.id===id);
+  document.querySelectorAll('#drawer-row .avatar-btn').forEach(b=>{
+    b.classList.toggle('selected',b.dataset.id===id);
+  });
+}
+
+function loadScores(){
+  try{scores=JSON.parse(sessionStorage.getItem('dg_scores')||'{}')}catch(e){scores={}}
+}
+
+function saveScores(){
+  try{sessionStorage.setItem('dg_scores',JSON.stringify(scores))}catch(e){}
+}
+
+function resetScores(){
+  scores={};
+  saveScores();
+  usedWords.clear();
+  roundNum=0;
+  renderDrawerSelect();
+  showScreen('home');
+}
+
+// ===== SCREENS =====
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='scoreboard')renderScoreboard();
+  if(id==='home')renderDrawerSelect();
+}
+
+// ===== ROUND =====
+function startRound(){
+  if(!currentDrawer)selectDrawer(AVATARS[0].id);
+  roundNum++;
+  pickWord();
+  document.getElementById('peek-word').textContent=currentWord;
+  document.getElementById('peek-category').textContent=currentCategory;
+  showScreen('peek-screen');
+}
+
+function pickWord(){
+  // Pick a random word not yet used
+  let available=WORDS.filter(w=>!usedWords.has(w.word));
+  if(available.length===0){usedWords.clear();available=[...WORDS]}
+  const pick=available[Math.floor(Math.random()*available.length)];
+  currentWord=pick.word;
+  currentCategory=pick.cat;
+  usedWords.add(currentWord);
+}
+
+function skipWord(){
+  pickWord();
+  document.getElementById('peek-word').textContent=currentWord;
+  document.getElementById('peek-category').textContent=currentCategory;
+}
+
+// ===== DRAWING =====
+function startDrawing(){
+  timeLeft=90;
+  document.getElementById('draw-timer').textContent='1:30';
+  document.getElementById('draw-timer').classList.remove('urgent');
+  document.getElementById('draw-round').textContent=`Round ${roundNum}`;
+  document.getElementById('draw-avatar').textContent=currentDrawer.emoji;
+
+  showScreen('draw-screen');
+  setupCanvas();
+  clearCanvas();
+  startDrawTimer();
+}
+
+function setupCanvas(){
+  canvas=document.getElementById('canvas');
+  const container=document.getElementById('canvas-container');
+  canvas.width=container.offsetWidth*2;
+  canvas.height=container.offsetHeight*2;
+  canvas.style.width=container.offsetWidth+'px';
+  canvas.style.height=container.offsetHeight+'px';
+  ctx=canvas.getContext('2d');
+  ctx.scale(2,2);
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+
+  canvas.removeEventListener('pointerdown',onPointerDown);
+  canvas.removeEventListener('pointermove',onPointerMove);
+  canvas.removeEventListener('pointerup',onPointerUp);
+  canvas.removeEventListener('pointerleave',onPointerUp);
+
+  canvas.addEventListener('pointerdown',onPointerDown);
+  canvas.addEventListener('pointermove',onPointerMove);
+  canvas.addEventListener('pointerup',onPointerUp);
+  canvas.addEventListener('pointerleave',onPointerUp);
+}
+
+function onPointerDown(e){
+  e.preventDefault();
+  isDrawing=true;
+  const rect=canvas.getBoundingClientRect();
+  lastX=(e.clientX-rect.left);
+  lastY=(e.clientY-rect.top);
+  ctx.beginPath();
+  ctx.arc(lastX,lastY,drawSize/2,0,Math.PI*2);
+  ctx.fillStyle=drawColor==='eraser'?'#ffffff':drawColor;
+  ctx.fill();
+}
+
+function onPointerMove(e){
+  if(!isDrawing)return;
+  e.preventDefault();
+  const rect=canvas.getBoundingClientRect();
+  const x=(e.clientX-rect.left);
+  const y=(e.clientY-rect.top);
+  ctx.beginPath();
+  ctx.moveTo(lastX,lastY);
+  ctx.lineTo(x,y);
+  ctx.strokeStyle=drawColor==='eraser'?'#ffffff':drawColor;
+  ctx.lineWidth=drawColor==='eraser'?drawSize*3:drawSize;
+  ctx.stroke();
+  lastX=x;
+  lastY=y;
+}
+
+function onPointerUp(e){
+  isDrawing=false;
+}
+
+function setColor(el){
+  drawColor=el.dataset.color;
+  document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function setSize(el){
+  drawSize=parseInt(el.dataset.size);
+  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function clearCanvas(){
+  if(!ctx)return;
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+function startDrawTimer(){
+  clearInterval(drawTimer);
+  drawTimer=setInterval(()=>{
+    timeLeft--;
+    const m=Math.floor(timeLeft/60);
+    const s=timeLeft%60;
+    const el=document.getElementById('draw-timer');
+    el.textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    el.classList.toggle('urgent',timeLeft<=15);
+    if(timeLeft<=0)timeUpOrSkip();
+  },1000);
+}
+
+function timeUpOrSkip(){
+  clearInterval(drawTimer);
+  // Nobody gets points
+  afterRound();
+}
+
+// ===== GUESS =====
+function showGuessScreen(){
+  clearInterval(drawTimer);
+  document.getElementById('guess-word').textContent=currentWord;
+  // Show all avatars EXCEPT the drawer
+  const container=document.getElementById('guess-avatars');
+  container.innerHTML=AVATARS.filter(a=>a.id!==currentDrawer.id).map(a=>
+    `<div class="guess-avatar" data-id="${a.id}" onclick="guesserSelected('${a.id}')">${a.emoji}</div>`
+  ).join('');
+  showScreen('guess-screen');
+}
+
+function guesserSelected(id){
+  // Flash the avatar
+  const el=document.querySelector(`.guess-avatar[data-id="${id}"]`);
+  el.classList.add('flash');
+
+  // Award points
+  scores[currentDrawer.id]=(scores[currentDrawer.id]||0)+2;
+  scores[id]=(scores[id]||0)+3;
+  saveScores();
+
+  setTimeout(()=>afterRound(),600);
+}
+
+function nobodyGuessed(){
+  afterRound();
+}
+
+function afterRound(){
+  // Auto-advance to next drawer (rotate through avatars)
+  const currentIdx=AVATARS.findIndex(a=>a.id===currentDrawer.id);
+  const nextIdx=(currentIdx+1)%AVATARS.length;
+  selectDrawer(AVATARS[nextIdx].id);
+  renderDrawerSelect();
+  showScreen('scoreboard');
+}
+
+// ===== SCOREBOARD =====
+function renderScoreboard(){
+  const list=document.getElementById('sb-list');
+  const entries=AVATARS.map(a=>({...a,score:scores[a.id]||0}))
+    .filter(a=>a.score>0)
+    .sort((a,b)=>b.score-a.score);
+
+  if(entries.length===0){
+    list.innerHTML='<div class="sb-empty">No scores yet. Start drawing!</div>';
+    return;
+  }
+
+  list.innerHTML=entries.map((a,i)=>{
+    const rankText=i===0?'\u{1F451}':i===1?'\u{1F948}':i===2?'\u{1F949}':(i+1);
+    return`<div class="sb-entry">
+      <div class="sb-rank">${rankText}</div>
+      <div class="sb-avatar">${a.emoji}</div>
+      <div class="sb-name">${a.name}</div>
+      <div class="sb-score">${a.score}</div>
+      <div class="sb-detail">pts</div>
+    </div>`;
+  }).join('');
+}
+
+// ===== PREVENT ZOOM =====
+document.addEventListener('dblclick',e=>e.preventDefault());
+document.addEventListener('gesturestart',e=>e.preventDefault());
+
+// ===== START =====
+init();
+</script>
+</body>
+</html>
